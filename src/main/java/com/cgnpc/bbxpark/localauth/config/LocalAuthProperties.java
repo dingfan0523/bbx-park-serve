@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "bbx.local-auth")
 public class LocalAuthProperties {
 
-    private String userId = "LOCAL001";
+    private String userId = "P309147";
     private String userName = "本地用户";
     private String password = "local123";
     private String deptId = "LOCAL-DEPT";

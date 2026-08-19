@@ -14,9 +14,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class LocalAutoLoginControllerTest {
 
     @Test
-    void loginCasCreatesLocalSessionAndRedirectsToFrontend() {
+    void loginCasUsesDefaultLocalUserAndRedirectsToFrontend() {
         LocalAuthProperties properties = new LocalAuthProperties();
-        properties.setUserId("LOCAL001");
         properties.setPassword("local123");
         properties.setFrontendUrl("http://127.0.0.1:8010");
         AtomicReference<String> credentials = new AtomicReference<>();
@@ -28,8 +27,8 @@ class LocalAutoLoginControllerTest {
 
         RedirectView redirect = controller.loginCas();
 
-        assertEquals("LOCAL001:local123", credentials.get());
-        assertEquals("LOCAL001", sessionUserId.get());
+        assertEquals("P309147:local123", credentials.get());
+        assertEquals("P309147", sessionUserId.get());
         assertEquals("http://127.0.0.1:8010", redirect.getUrl());
     }
 }

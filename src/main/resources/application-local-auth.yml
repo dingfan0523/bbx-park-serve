@@ -16,7 +16,7 @@ cud:
 
 bbx:
   local-auth:
-    user-id: LOCAL001
+    user-id: P309147
     user-name: 本地用户
     password: local123
     dept-id: LOCAL-DEPT
