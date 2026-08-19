@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cgnpc.bbxpark.energy.mapper.EnergyBranchRepository">
+    <select id="listWithChildren" resultType="com.cgnpc.bbxpark.energy.domain.EnergyBranch">
+        WITH RECURSIVE branch_tree (id, branch_name, branch_type, parent_id,sort_order,tenant_id) AS (
+        SELECT id, branch_name, branch_type, parent_id,sort_order,tenant_id
+        FROM bbx_energy_branch
+        WHERE id = #{branchId}
+        AND status = 1
+        AND deleted = 1
+        AND tenant_id = #{tenantId}
+        UNION ALL
+        SELECT b.id, b.branch_name, b.branch_type, b.parent_id,b.sort_order,b.tenant_id
+        FROM bbx_energy_branch b
+        INNER JOIN branch_tree bt ON b.parent_id = bt.id
+        WHERE b.status = 1
+        AND b.deleted = 1
+        AND b.tenant_id = #{tenantId}
+        )
+        SELECT id, branch_name, branch_type, parent_id,sort_order,tenant_id
+        FROM branch_tree
+        ORDER BY id
+    </select>
+</mapper>

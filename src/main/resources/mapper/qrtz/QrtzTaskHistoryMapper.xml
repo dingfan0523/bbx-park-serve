@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cgnpc.qrtz.mapper.QrtzTaskHistoryMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.cgnpc.qrtz.model.QrtzTaskHistory">
+        <id column="FIRE_ID" property="fireId" />
+        <result column="SCHED_NAME" property="schedName" />
+        <result column="INSTANCE_ID" property="instanceId" />
+        <result column="TASK_NAME" property="taskName" />
+        <result column="TASK_GROUP" property="taskGroup" />
+        <result column="FIRED_TIME" property="firedTime" />
+        <result column="FIRED_WAY" property="firedWay" />
+        <result column="COMPLETE_TIME" property="completeTime" />
+        <result column="EXPEND_TIME" property="expendTime" />
+        <result column="REFIRED" property="refired" />
+        <result column="EXEC_STATE" property="execState" />
+        <result column="LOG" property="log" />
+    </resultMap>
+
+</mapper>

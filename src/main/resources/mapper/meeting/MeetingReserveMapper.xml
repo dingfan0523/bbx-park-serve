@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.meeting.mapper.MeetingReserveRepository">
+    <select id="pageApp" resultType="com.cgnpc.bbxpark.meeting.dto.model.AppMeetingReserveModel">
+        SELECT DISTINCT
+        bmr.id,
+        bmr.reserve_name,
+        bmr.room_id,
+        bmr.room_name,
+        bmr.start_time,
+        bmr.end_time,
+        bmr.reserve_uid,
+        bmr.reserve_uname,
+        bmr.reserve_staffid,
+        bmr.in_valid_flag,
+        bmr.cancel_flag,
+        bmr.status,
+        CASE WHEN status IN(10,20) THEN 1 ELSE 2 END AS status2,
+        bm.space_id
+        FROM bbx_meeting_reserve bmr
+        LEFT JOIN bbx_meeting_reserve_sign s ON bmr.id = s.reserve_id
+        LEFT JOIN bbx_meeting_room bm ON bmr.room_id = bm.id
+        <where>
+            <if test="condition.tenantId != null">
+                AND bmr.tenant_id =#{condition.tenantId}
+            </if>
+            <if test="condition.userId != null">
+                AND (bmr.reserve_uid = #{condition.userId} OR s.sign_uid = #{condition.userId})
+            </if>
+            <if test="condition.cancelFlag != null">
+                AND bmr.cancel_flag =#{condition.cancelFlag}
+            </if>
+            <if test="condition.startTime != null and condition.endTime != null">
+                AND (#{condition.startTime} &lt;= bmr.end_time and #{condition.endTime} >= bmr.start_time)
+            </if>
+            <if test="condition.reserveName != null">
+                AND bmr.reserve_name like concat('%',#{condition.reserveName},'%')
+            </if>
+            <if test="condition.roomIdList != null and condition.roomIdList.size() > 0">
+                AND bmr.room_id in
+                <foreach collection="condition.roomIdList " item="roomId" open="(" separator=", "
+                         close=")">
+                    #{roomId}
+                </foreach>
+            </if>
+            AND bmr.draft = 0
+        </where>
+        ORDER BY bmr.cancel_flag ASC,status2 ASC,
+        CASE WHEN bmr.status = 30 THEN bmr.start_time ELSE NULL END DESC,
+        CASE WHEN bmr.status != 30 THEN bmr.start_time ELSE NULL END ASC
+    </select>
+
+    <select id="pageCount" resultType="java.lang.Integer">
+        SELECT COUNT(DISTINCT bmr.id)
+        FROM bbx_meeting_reserve bmr
+        LEFT JOIN bbx_meeting_reserve_sign s ON bmr.id = s.reserve_id
+        <where>
+            <if test="condition.tenantId != null">
+                AND bmr.tenant_id =#{condition.tenantId}
+            </if>
+            <if test="condition.userId != null">
+                AND (bmr.reserve_uid = #{condition.userId} OR s.sign_uid = #{condition.userId})
+            </if>
+            <if test="condition.cancelFlag != null">
+                AND bmr.cancel_flag =#{condition.cancelFlag}
+            </if>
+            <if test="condition.startTime != null and condition.endTime != null">
+                AND (#{condition.startTime} &lt;= bmr.end_time and #{condition.endTime} >= bmr.start_time)
+            </if>
+            AND bmr.draft = 0
+        </where>
+    </select>
+
+
+    <select id="pageReserve"
+            resultType="com.cgnpc.bbxpark.meeting.dto.model.MeetingReserveModel">
+        select
+        bmr.id,
+        bmr.room_name,
+        bmr.reserve_name,
+        bmr.room_id,
+        bmr.start_time,
+        bmr.end_time,
+        bmr.reserve_uid,
+        bmr.reserve_uname,
+        bmr.reserve_staffid,
+        bmr.real_start_time,
+        bmr.real_end_time,
+        bmr.real_start_type,
+        bmr.real_end_type,
+        bmr.in_valid_flag,
+        bmr.status,
+        bmr.cancel_flag,
+        bmr.operate_uname,
+        bmr.operate_staffid,
+        bmr.operate_reason,
+        bm.space_id
+        from bbx_meeting_reserve bmr
+        JOIN bbx_meeting_room bm ON bmr.room_id = bm.id
+        <where>
+        <if test="condition.tenantId != null">
+            AND bmr.tenant_id =#{condition.tenantId}
+        </if>
+        <if test="condition.reserveName != null">
+            AND bmr.reserve_name like concat('%',#{condition.reserveName},'%')
+        </if>
+        <if test="condition.roomName != null">
+            AND bmr.room_name like concat('%',#{condition.roomName},'%')
+        </if>
+        <if test="condition.reserveUname != null">
+            AND (bmr.reserve_uname like concat('%',#{condition.reserveUname},'%') or bmr.reserve_staffid =#{condition.reserveUname})
+        </if>
+        <if test="condition.inValidFlag != null">
+            AND bmr.in_valid_flag =#{condition.inValidFlag} AND bmr.cancel_flag = 0
+        </if>
+        <if test="condition.status != null">
+            AND bmr.status =#{condition.status} AND bmr.cancel_flag = 0
+        </if>
+        <if test="condition.startTime != null and condition.endTime != null">
+            AND (#{condition.startTime} &lt;= bmr.end_time and #{condition.endTime} >= bmr.start_time)
+        </if>
+        <if test="condition.spaceIdList != null and condition.spaceIdList.size() > 0">
+            AND bm.space_id in
+            <foreach collection="condition.spaceIdList " item="spaceId" open="(" separator=", "
+                     close=")">
+                #{spaceId}
+            </foreach>
+        </if>
+        AND bmr.draft = 0
+        </where>
+        order by bmr.start_time DESC
+    </select>
+
+    <select id="pageMyReserve"
+            resultType="com.cgnpc.bbxpark.meeting.dto.model.MeetingReserveModel">
+        select DISTINCT
+        bmr.id,
+        bmr.room_name,
+        bmr.reserve_name,
+        bmr.room_id,
+        bmr.start_time,
+        bmr.end_time,
+        bmr.reserve_uid,
+        bmr.reserve_uname,
+        bmr.reserve_staffid,
+        bmr.real_start_time,
+        bmr.real_end_time,
+        bmr.real_start_type,
+        bmr.real_end_type,
+        bmr.in_valid_flag,
+        bmr.status,
+        bmr.cancel_flag,
+        bmr.operate_uname,
+        bmr.operate_staffid,
+        bmr.operate_reason,
+        bm.space_id
+        from bbx_meeting_reserve bmr
+        LEFT JOIN bbx_meeting_reserve_sign s ON bmr.id = s.reserve_id
+        LEFT JOIN bbx_meeting_room bm ON bmr.room_id = bm.id
+        <where>
+            <if test="condition.tenantId != null">
+                AND bmr.tenant_id =#{condition.tenantId}
+            </if>
+            <if test="condition.userId != null">
+                AND (bmr.reserve_uid = #{condition.userId} OR s.sign_uid = #{condition.userId})
+            </if>
+            <if test="condition.reserveName != null">
+                AND bmr.reserve_name like concat('%',#{condition.reserveName},'%')
+            </if>
+            <if test="condition.roomName != null">
+                AND bmr.room_name like concat('%',#{condition.roomName},'%')
+            </if>
+            <if test="condition.reserveUname != null">
+                AND (bmr.reserve_uname like concat('%',#{condition.reserveUname},'%') or bmr.reserve_staffid =#{condition.reserveUname})
+            </if>
+            <if test="condition.inValidFlag != null">
+                AND bmr.in_valid_flag =#{condition.inValidFlag} AND bmr.cancel_flag = 0
+            </if>
+            <if test="condition.status != null">
+                AND bmr.status =#{condition.status} AND bmr.cancel_flag = 0
+            </if>
+            <if test="condition.startTime != null and condition.endTime != null">
+                AND (#{condition.startTime} &lt;= bmr.end_time and #{condition.endTime} >= bmr.start_time)
+            </if>
+            <if test="condition.spaceIdList != null and condition.spaceIdList.size() > 0">
+                AND bm.space_id in
+                <foreach collection="condition.spaceIdList " item="spaceId" open="(" separator=", "
+                         close=")">
+                    #{spaceId}
+                </foreach>
+            </if>
+            AND bmr.draft = 0
+        </where>
+        order by bmr.start_time DESC
+    </select>
+
+    <select id="findReserve"
+            resultType="com.cgnpc.bbxpark.meeting.dto.model.MeetingReserveModel">
+        select
+        bmr.id,
+        bmr.room_id,
+        bmr.start_time,
+        bmr.end_time,
+        bmr.reserve_name,
+        bmr.reserve_uid,
+        bmr.reserve_uname,
+        bmr.reserve_staffid,
+        bmr.in_valid_flag,
+        bmr.status
+        from bbx_meeting_reserve bmr
+        JOIN bbx_meeting_room bm ON bmr.room_id = bm.id
+        <where>
+            <if test="condition.tenantId != null">
+                AND bmr.tenant_id =#{condition.tenantId}
+            </if>
+            <if test="condition.roomName != null">
+                AND bm.room_name like concat('%',#{condition.roomName},'%')
+            </if>
+            <if test="condition.roomId != null">
+                AND bmr.room_id =#{condition.roomId}
+            </if>
+            <if test="condition.roomIdList != null and condition.roomIdList.size() > 0">
+                AND bmr.room_id in
+                <foreach collection="condition.roomIdList " item="roomId" open="(" separator=", "
+                         close=")">
+                    #{roomId}
+                </foreach>
+            </if>
+            <if test="condition.startTime != null and condition.endTime != null">
+                AND (#{condition.endTime} >= bmr.end_time and #{condition.startTime} &lt;= bmr.start_time)
+            </if>
+            <if test="condition.cancelFlag != null">
+                AND bmr.cancel_flag =#{condition.cancelFlag}
+            </if>
+            AND bmr.draft = 0
+        </where>
+        order by bmr.start_time
+    </select>
+
+    <select id="pageSignReserve"
+            resultType="com.cgnpc.bbxpark.meeting.dto.model.MeetingReserveModel">
+        select
+            distinct
+        bmr.id,
+        bmr.room_name,
+        bmr.reserve_name,
+        bmr.room_id,
+        bmr.start_time,
+        bmr.end_time,
+        bm.space_id
+        from bbx_meeting_reserve bmr
+        JOIN bbx_meeting_room bm ON bmr.room_id = bm.id
+        JOIN bbx_meeting_reserve_sign bmrs ON bmr.id = bmrs.reserve_id
+    <where>
+        <if test="condition.tenantId != null">
+            AND bmr.tenant_id =#{condition.tenantId}
+        </if>
+        <if test="condition.roomName != null">
+            AND bmr.room_name like concat('%',#{condition.roomName},'%')
+        </if>
+        <if test="condition.reserveName != null">
+            AND bmr.reserve_name like concat('%',#{condition.reserveName},'%')
+        </if>
+        <if test="condition.roomId != null">
+            AND bmr.room_id =#{condition.roomId}
+        </if>
+        <if test="condition.reserveUname != null">
+            AND (bmr.reserve_uname like concat('%',#{condition.reserveUname},'%') or bmr.reserve_staffid =#{condition.reserveUname})
+        </if>
+        <if test="condition.userId != null">
+            AND bmrs.sign_uid=#{condition.userId}
+        </if>
+        <if test="condition.startTime != null and condition.endTime != null">
+            AND (#{condition.startTime} &lt;= bmr.end_time and #{condition.endTime} >= bmr.start_time)
+        </if>
+        <if test="condition.spaceIdList != null and condition.spaceIdList.size() > 0">
+            AND bm.space_id in
+            <foreach collection="condition.spaceIdList " item="spaceId" open="(" separator=", "
+                     close=")">
+                #{spaceId}
+            </foreach>
+        </if>
+        AND bmr.draft = 0
+    </where>
+        order by bmr.start_time DESC
+    </select>
+
+    <select id="getMeetingRoomHealth" resultType="com.cgnpc.bbxpark.ioc.dto.model.WeekRoomHealth">
+        <![CDATA[
+        WITH week_dates AS (
+        SELECT TRUNC(SYSDATE, 'IW') - 1 + (LEVEL - 1) AS day_date
+        FROM DUAL
+        CONNECT BY LEVEL <= 7
+        )
+        ]]>
+        SELECT
+        w.day_date AS date,
+        COALESCE(COUNT(m.id), 0) AS count
+        FROM week_dates w
+        LEFT JOIN bbx_meeting_reserve m
+        ON TRUNC(m.real_start_time) = w.day_date
+        AND m.in_valid_flag = 0
+        AND m.cancel_flag = 0
+        AND m.deleted = 1
+        AND m.draft = 0
+        <if test="tenantId != null">
+            AND m.tenant_id =#{tenantId}
+        </if>
+        GROUP BY w.day_date
+        ORDER BY w.day_date;
+    </select>
+</mapper>

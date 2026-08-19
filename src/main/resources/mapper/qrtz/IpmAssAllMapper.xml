@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cgnpc.qrtz.mapper.IpmAssAllMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.cgnpc.qrtz.model.IpmAssAll">
+        <result column="ASSIGNEE_USER" property="assigneeUser" />
+        <result column="DATE_FLAG" property="dateFlag" />
+        <result column="All_DATE_FLAG" property="allDateFlag" />
+        <result column="ASS_ID" property="assId" />
+        <result column="PROC_ID" property="procId" />
+        <result column="PROC_INST_ID" property="procInstId" />
+        <result column="ACT_ID" property="actId" />
+        <result column="ACT_NAME" property="actName" />
+        <result column="MODIFY_DATE" property="modifyDate" />
+        <result column="newDate" property="newDate" />
+        <result column="OVER_INTO_TIME" property="overIntoTime" />
+        <result column="EXPIRE_INTO_TIME" property="expireIntoTime" />
+        <result column="START_USER" property="startUser" />
+        <result column="START_TIME" property="startTime" />
+        <result column="PROC_TITLE" property="procTitle" />
+        <result column="OVER_TIME" property="overTime" />
+        <result column="EXPIRE_TIME" property="expireTime" />
+        <result column="operation_type_id" property="operationTypeId" />
+        <result column="operation_type_name" property="operationTypeName" />
+        <result column="OVER_TIME_NOTIFY_WAY" property="overTimeNotifyWay" />
+        <result column="OVER_TIME_INTERVAL" property="overTimeInterval" />
+        <result column="EXPIRE_TIME_NOTIFY_WAY" property="expireTimeNotifyWay" />
+        <result column="EXPIRE_TIME_INTERVAL" property="expireTimeInterval" />
+        <result column="IS_REP" property="isRep" />
+        <result column="OVER_DATE_FLAG_1" property="overDateFlag1" />
+        <result column="EXPIRE_DATE_FLAG_1" property="expireDateFlag1" />
+    </resultMap>
+
+    <select id="selectAllParamOnDm" resultMap="BaseResultMap">
+        SELECT
+            ASSIGNEE_USER,
+            DATE_FLAG,
+            All_DATE_FLAG,
+            ASS_ID,
+            PROC_ID,
+            PROC_INST_ID,
+            ACT_ID,
+            ACT_NAME,
+            MODIFY_DATE,
+            CURRENT_TIMESTAMP AS newDate,
+            OVER_INTO_TIME,
+            EXPIRE_INTO_TIME,
+            START_USER,
+            OVER_TIME,
+            EXPIRE_TIME,
+            operation_type_id,
+            operation_type_name,
+            OVER_TIME_NOTIFY_WAY,
+            EXPIRE_TIME_NOTIFY_WAY,
+            PROC_TITLE,
+            START_TIME,
+            CASE
+                WHEN CURRENT_TIMESTAMP > OVER_INTO_TIME THEN 1
+                ELSE 0
+                END AS OVER_DATE_FLAG_1,
+            CASE
+                WHEN CURRENT_TIMESTAMP > EXPIRE_INTO_TIME THEN
+                    CASE
+                        WHEN CURRENT_TIMESTAMP > OVER_INTO_TIME THEN 0
+                        ELSE 1
+                        END
+                ELSE 0
+                END AS EXPIRE_DATE_FLAG_1
+        FROM
+            (
+                SELECT
+                    fg.ASSIGNEE_USER,
+                    fg.DATE_FLAG,
+                    fg.All_DATE_FLAG,
+                    fg.ID AS ASS_ID,
+                    aa.PROC_ID,
+                    aa.PROC_INST_ID,
+                    aa.ACT_ID,
+                    aa.ACT_NAME,
+                    aa.MODIFY_DATE,
+                    CASE
+                        WHEN bb.ASS_TYPE = '1' THEN DATEADD(MINUTE, bb.OVER_TIME, aa.MODIFY_DATE)
+                        WHEN bb.ASS_TYPE = '2' THEN (
+                            SELECT
+                                TOP 1 DATES
+                            FROM
+                                ipm_sys_calender
+                            WHERE
+                                WORK_MARKERS = 'y'
+                              AND DATES > CAST(aa.MODIFY_DATE AS DATE)
+                            ORDER BY
+                                DATES ASC )
+                        ELSE NULL
+                        END AS OVER_INTO_TIME,
+                    CASE
+                        WHEN bb.ASS_TYPE = '1' THEN
+                            CASE
+                                WHEN bb.EXPIRE_TIME = 0 THEN NULL
+                                ELSE DATEADD(MINUTE, bb.EXPIRE_TIME, aa.MODIFY_DATE)
+                                END
+                        WHEN bb.ASS_TYPE = '2' THEN (
+                            SELECT
+                                TOP 1 DATES
+                            FROM
+                                ipm_sys_calender
+                            WHERE
+                                WORK_MARKERS = 'y'
+                              AND DATES > CAST(aa.MODIFY_DATE AS DATE)
+                            ORDER BY
+                                DATES ASC )
+                        ELSE NULL
+                        END AS EXPIRE_INTO_TIME,
+                    aa.START_USER,
+                    aa.PROC_TITLE,
+                    aa.START_TIME,
+                    bb.OVER_TIME,
+                    bb.EXPIRE_TIME,
+                    bb.OVER_TIME_NOTIFY_WAY,
+                    bb.EXPIRE_TIME_NOTIFY_WAY,
+                    cc.operation_type_id,
+                    cc.operation_type_name
+                FROM
+                    (
+                        SELECT
+                            PROCESS_INFO_ID,
+                            PROC_INST_ID,
+                            PROC_ID,
+                            ACT_ID,
+                            ACT_NAME,
+                            START_USER,
+                            MODIFY_DATE，
+                            PROC_TITLE,
+                            START_TIME
+                        FROM
+                            cud_wb_process_info_t
+                        WHERE
+                            FLOW_STATUS != 99
+			AND DELETE_FLAG = '1' ) aa
+                        LEFT JOIN (
+                        SELECT
+                            ACT_ID,
+                            OVER_TIME,
+                            EXPIRE_TIME,
+                            OVER_TIME_NOTIFY_WAY,
+                            EXPIRE_TIME_NOTIFY_WAY,
+                            ASS_TYPE
+                        FROM
+                            cud_wf_activity_def_t
+                        WHERE
+                            OVER_TIME > 0
+                           OR EXPIRE_TIME > 0 ) bb ON
+                        aa.ACT_ID = bb.ACT_ID
+                        LEFT JOIN (
+                        SELECT
+                            l1.proc_inst_id,
+                            l1.CREATE_DATE,
+                            l1.operation_type_id,
+                            l1.operation_type_name
+                        FROM
+                            (
+                                SELECT
+                                    proc_inst_id,
+                                    CREATE_DATE,
+                                    operation_type_id,
+                                    operation_type_name
+                                FROM
+                                    cud_log_procinstoperation
+                                WHERE
+                                    operation_type_id NOT IN ('0', '1', '2') ) l1
+                                INNER JOIN (
+                                SELECT
+                                    proc_inst_id,
+                                    MAX(CREATE_DATE) AS CREATE_DATE
+                                FROM
+                                    cud_log_procinstoperation
+                                GROUP BY
+                                    proc_inst_id ) l2 ON
+                                        l1.proc_inst_id = l2.proc_inst_id
+                                    AND l1.CREATE_DATE = l2.CREATE_DATE ) cc ON
+                        aa.proc_inst_id = cc.proc_inst_id
+                        LEFT JOIN (
+                        SELECT
+                            ass.ID,
+                            ass.PROCESS_INFO_ID,
+                            ass.ACT_ID,
+                            ass.ASSIGNEE_USER,
+                            ass.CASSIGNEE_FLAG,
+                            ass.DATE_FLAG,
+                            pr.DATE_FLAG AS All_DATE_FLAG
+                        FROM
+                            (
+                                SELECT
+                                    ID,
+                                    PROCESS_INFO_ID,
+                                    ACT_ID,
+                                    ASSIGNEE_USER,
+                                    CASSIGNEE_FLAG,
+                                    DATE_FLAG
+                                FROM
+                                    ipm_process_assignee ) ass
+                                LEFT JOIN ipm_process_statue pr ON
+                                pr.PROCESS_INFO_ID = ass.PROCESS_INFO_ID ) fg ON
+                                aa.PROC_INST_ID = fg.PROCESS_INFO_ID
+                            AND aa.ACT_ID = fg.ACT_ID
+                WHERE
+                    ASSIGNEE_USER IS NOT NULL ) cs
+        WHERE
+            OVER_TIME IS NOT NULL
+           OR EXPIRE_TIME IS NOT NULL
+    </select>
+
+
+
+</mapper>

@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.energy.mapper.MeterAutoRecordCountRepository">
+
+    <select id="getMeterAutoRecordStatistics" resultType="com.cgnpc.bbxpark.ioc.dto.model.WaterStatisticsModel">
+        SELECT
+        TO_CHAR(count_time, #{timeType}) AS date,
+        COALESCE(SUM(energy_consumption), 0) AS water
+        FROM bbx_meter_auto_record_count
+        WHERE
+        count_time >= #{minDay}
+        AND count_time &lt;= #{maxDay}
+        AND energy_consumption IS NOT NULL
+        AND energy_consumption >= 0
+        AND deleted = 1
+        <if test="tenantId != null">
+            and tenant_id =#{tenantId}
+        </if>
+        <if test="deviceIds != null and deviceIds.size() > 0">
+            AND device_id in
+            <foreach collection="deviceIds " item="deviceId" open="(" separator=", "
+                     close=")">
+                #{deviceId}
+            </foreach>
+        </if>
+        GROUP BY TO_CHAR(count_time, #{timeType})
+    </select>
+
+    <select id="findAreaCompare" resultType="com.cgnpc.bbxpark.ioc.dto.model.WaterAreaCompareModel">
+        WITH
+        -- 1. 获取目标子支路（直接下级）
+        target_branches AS (
+        SELECT id, branch_name FROM bbx_energy_branch
+        WHERE branch_type = #{branchType} AND tenant_id = #{tenantId}
+        AND deleted=1 AND (
+        <choose>
+            <when test="branchId == null">
+                parent_id IS NULL
+            </when>
+            <otherwise>
+                parent_id = #{branchId}
+            </otherwise>
+        </choose>
+        ) ),
+        -- 2. 计算每个支路的总能耗（通过关联设备与自动抄表记录）
+        branch_energy AS (
+        SELECT bd.branch_id,
+        SUM(COALESCE(ac.energy_consumption, 0)) AS total_energy
+        FROM bbx_branch_device bd
+        LEFT JOIN bbx_meter_auto_record_count ac
+        ON bd.device_id = ac.device_id
+        AND ac.count_time BETWEEN #{startTime} AND #{endTime}
+        AND ac.tenant_id = #{tenantId}
+        WHERE bd.branch_id IN (SELECT id FROM target_branches)
+        AND bd.tenant_id = #{tenantId}
+        GROUP BY bd.branch_id
+        ),
+        -- 3. 判断是否有下级支路
+        branch_has_children AS (
+        SELECT b.parent_id,
+        CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END AS has_children
+        FROM bbx_energy_branch b
+        WHERE b.parent_id IN (SELECT id FROM target_branches)
+        AND b.branch_type = #{branchType}
+        AND b.tenant_id = #{tenantId}
+        AND b.deleted = 1
+        GROUP BY b.parent_id
+        )
+        -- 4. 最终结果
+        SELECT
+        tb.id,
+        tb.branch_name AS branchName,
+        COALESCE(be.total_energy, 0) AS water,   -- 用水量（总能耗）
+        COALESCE(bhc.has_children, 0) AS hasChildren
+        FROM target_branches tb
+        LEFT JOIN branch_energy be ON tb.id = be.branch_id
+        LEFT JOIN branch_has_children bhc ON tb.id = bhc.parent_id
+        ORDER BY tb.id
+    </select>
+
+    <select id="getRealtimeFlowRank" resultType="com.cgnpc.bbxpark.ioc.dto.model.WaterRealtimeFlowRankModel">
+        SELECT
+        device_id AS deviceId,
+        ROUND(SUM(COALESCE(energy_consumption, 0)), 2) AS value
+        FROM bbx_meter_auto_record_count
+        WHERE device_id IN
+        <foreach collection="deviceIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND count_time BETWEEN #{startTime} AND #{endTime}
+        AND deleted = 1
+        AND tenant_id = #{tenantId}
+        GROUP BY device_id
+        ORDER BY value DESC
+        LIMIT 5
+    </select>
+</mapper>

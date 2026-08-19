@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cgnpc.bbxpark.problemReport.mapper.ProblemDeviceRepository">
+
+    <insert id="insertBatch" parameterType="java.util.List">
+        INSERT INTO bbx_problem_device (
+        problem_id, device_id, device_name, space_id, space_name, deleted, create_by,creator_id, create_time, tenant_id
+        )
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (
+            #{item.problemId}, #{item.deviceId}, #{item.deviceName}, #{item.spaceId}, #{item.spaceName},
+            #{item.deleted}, #{item.createBy}, #{item.creatorId}, #{item.createTime}, #{item.tenantId}
+            )
+        </foreach>
+    </insert>
+
+</mapper>

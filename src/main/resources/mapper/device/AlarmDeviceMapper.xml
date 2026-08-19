@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.device.mapper.AlarmDeviceRepository">
+    <!-- 批量插入 IocDevice 记录 -->
+    <insert id="beachInsert" parameterType="java.util.List">
+        INSERT INTO bbx_alarm_device (
+        alarm_id,
+        device_name,
+        device_id,
+        space_id,
+        space_name,
+        tenant_id,
+        create_time,
+        update_time
+        ) VALUES
+        <foreach collection="alarmDevices" item="device" separator=",">
+            (
+            #{device.alarmId},
+            #{device.deviceName},
+            #{device.deviceId},
+            #{device.spaceId},
+            #{device.spaceName},
+            #{device.tenantId},
+            #{device.createTime},
+            #{device.updateTime}
+            )
+        </foreach>
+    </insert>
+</mapper>

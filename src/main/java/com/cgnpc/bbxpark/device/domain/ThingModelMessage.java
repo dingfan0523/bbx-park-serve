@@ -1,0 +1,107 @@
+/*
+ * +----------------------------------------------------------------------
+ * | Copyright (c)  2021-2022 All rights reserved.
+ * +----------------------------------------------------------------------
+ * | Licensed 未经许可不能去掉「」相关版权
+ * +----------------------------------------------------------------------
+ * | Author: 
+ * +----------------------------------------------------------------------
+ */
+package com.cgnpc.bbxpark.device.domain;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.data.elasticsearch.annotations.Document;
+import org.springframework.data.elasticsearch.annotations.Field;
+import org.springframework.data.elasticsearch.annotations.FieldType;
+
+import java.util.Date;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Document(indexName = "thing_model_message")
+public class ThingModelMessage {
+
+    /**
+     * es id
+     */
+   @Field(type = FieldType.Long)
+    private String id;
+
+    /**
+     * RID+时间+序列号  的id
+     */
+    private String mid;
+
+    /**
+     * 设备id
+     */
+    private String deviceId;
+
+    /**
+     * 产品key
+     */
+    private String productKey;
+    /**
+     * 产品key
+     */
+    private String productName;
+
+    /**
+     * 设备name
+     */
+    private String deviceName;
+
+    /**
+     * 所属用户ID
+     */
+    private String uid;
+
+    /**
+     * 消息类型
+     * lifetime:生命周期
+     * state:状态
+     * property:属性
+     * event:事件
+     * service:服务
+     */
+    private String type;
+    /**
+     * set_reply-设置回复
+     * report-上报 set-设置
+     * online-上线
+     * offLine-下线
+     * register-注册
+     * 可能还有其他值具体可参考前端代码
+     */
+    private String identifier;
+
+    /**
+     * 消息状态码
+     */
+    private int code;
+
+    /**
+     * 数据
+     */
+    private Object data;
+
+    private Object thingModel;
+
+    /**
+     * 时间戳，设备上的事件或数据产生的本地时间
+     */
+    @Field(type = FieldType.Long)
+    private Long occurred;
+
+    /**
+     * 消息上报时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss",timezone = "GMT+8")
+    private Date time;
+
+    private String spaceName;
+}

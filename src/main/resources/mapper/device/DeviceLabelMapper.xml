@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.device.mapper.DeviceLabelRepository">
+
+
+	<select id="pageDeviceToLabel"
+			resultType="com.cgnpc.bbxpark.device.dto.model.IocDeviceModel">
+		select
+		bid.id,
+		bid.device_name,
+		bid.space_id,
+		bid.create_time,
+		bid.enable_status
+		FROM
+		bbx_ioc_device bid
+		<where>
+			and bid.deleted = 1
+			<if test="condition.tenantId != null">
+				and bid.tenant_id = #{condition.tenantId}
+			</if>
+			<if test="condition.deviceName != null">
+				AND bid.device_name like CONCAT('%',#{condition.deviceName},'%')
+			</if>
+			<if test="condition.spaceId != null">
+				AND bid.space_id = #{condition.spaceId}
+			</if>
+			<if test="condition.enableStatus != null">
+				AND bid.enable_status = #{condition.enableStatus}
+			</if>
+			<if test="condition.labelId != null">
+				AND  bid.id  in(select device_id from bbx_device_label_rel where  label_id = #{condition.labelId})
+			</if>
+			<if test="condition.noLabelId != null">
+				AND  bid.id not in(select device_id from bbx_device_label_rel where  label_id = #{condition.noLabelId})
+			</if>
+		</where>
+		order by bid.create_time DESC
+	</select>
+</mapper>

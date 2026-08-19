@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.message.mapper.MessageUserRepository">
+    <select id="pageZy" resultType="com.cgnpc.bbxpark.message.dto.resp.MessageUserModel">
+        SELECT
+        info.id,
+        info.title,
+        info.content,
+        info.publish_time,
+        info.type_id,
+        info.cover,
+        info.summary,
+        info.business_id,
+        mu.id AS userMsgId,
+        mu.read_status,
+        mn.type as typeLabel
+        FROM
+        sys_message_info info
+        LEFT JOIN sys_message_user mu ON mu.msg_id = info.id
+        LEFT JOIN sys_message_notice mn ON mn.msg_id = info.id
+        <where>
+            AND info.`status` = 1 AND info.publish_time &lt;= NOW()
+            <if test="condition.type != null and condition.type.size() > 0">
+                AND mn.type IN
+                <foreach collection="condition.type" item="item" open="(" separator="," close=")">
+                    #{item}
+                </foreach>
+            </if>
+            <if test="condition.readStatus != null">
+                AND mu.read_status = #{condition.readStatus}
+            </if>
+            <if test="condition.userId != null">
+                AND mu.user_id = #{condition.userId}
+            </if>
+            <if test="condition.title != null">
+                AND info.title like concat('%',#{condition.title}, '%')
+            </if>
+            <if test="condition.tenantId != null">
+                AND info.tenant_id = #{condition.tenantId}
+            </if>
+            <if test="condition.startTime != null and condition.endTime != null">
+                AND info.publish_time BETWEEN #{condition.startTime} AND #{condition.endTime}
+            </if>
+        </where>
+        ORDER BY info.publish_time DESC
+    </select>
+
+    <select id="appUnread" resultType="com.cgnpc.bbxpark.message.dto.resp.UnreadModel">
+        SELECT
+        t.type,
+        COALESCE(unread.unreadCount, 0) AS unreadCount
+        FROM
+        (SELECT DISTINCT mn.type FROM sys_message_notice mn) t
+        LEFT JOIN (
+        SELECT
+        mn.type,
+        COUNT(mu.id) AS unreadCount
+        FROM
+        sys_message_notice mn
+        LEFT JOIN sys_message_user mu ON mn.msg_id = mu.msg_id
+        AND mu.read_status = 0
+        LEFT JOIN sys_message_info mi ON mi.id = mn.msg_id
+        AND mi.`status` = 1
+        AND mi.publish_time &lt;= NOW()
+        WHERE mi.tenant_id = #{condition.tenantId} AND mu.user_id = #{condition.userId}
+        GROUP BY
+        mn.type
+        ) unread ON t.type = unread.type
+        ORDER BY
+        t.type
+    </select>
+
+    <select id="findPage" resultType="com.cgnpc.bbxpark.message.dto.resp.MessageUserModel">
+        SELECT
+        me.*,
+        us.nick_name,
+        info.title,
+        info.summary,
+        info.remark,
+        info.link_url,
+        info.content,
+        info.publish_time,
+        se.nick_name as publisherName
+        FROM
+        sys_message_user me
+        left join uic_user_info us
+        on me.user_id = us.id
+        left join sys_message_info info
+        on me.msg_id = info.id
+        left join uic_user_info se
+        on info.publisher = se.id
+        <where>
+            <if test="condition.id != null">
+                AND me.id = #{condition.id}
+            </if>
+            <if test="condition.title != null">
+                AND info.title like concat('%',#{condition.title}, '%')
+            </if>
+            <if test="condition.typeId != null">
+                AND info.type_id = #{condition.typeId}
+            </if>
+            <if test="condition.userId != null">
+                AND me.user_id = #{condition.userId}
+            </if>
+            <if test="condition.msgId != null">
+                AND me.msg_id = #{condition.msgId}
+            </if>
+            <if test="condition.readStatus != null">
+                AND me.read_status = #{condition.readStatus}
+            </if>
+            <if test="condition.confirmStatus != null">
+                AND me.confirm_status = #{condition.confirmStatus}
+            </if>
+            <if test="condition.likeStatus != null">
+                AND me.like_status = #{condition.likeStatus}
+            </if>
+            <if test="condition.collectStatus != null">
+                AND me.collect_status = #{condition.collectStatus}
+            </if>
+            <if test="condition.linkParam != null">
+                AND me.link_param = #{condition.linkParam}
+            </if>
+            <if test="condition.replyContent != null">
+                AND me.reply_content = #{condition.replyContent}
+            </if>
+            <if test="condition.status != null and condition.status != 3 and condition.status != 6">
+                AND me.status = #{condition.status}
+            </if>
+            <if test="condition.status == 3">
+                AND me.status != 1
+            </if>
+            <if test="condition.status == 6">
+                AND me.status = 0
+            </if>
+            <if test="condition.createTime != null">
+                AND me.create_time = #{condition.createTime}
+            </if>
+            <if test="condition.creatorId != null">
+                AND me.creator_id = #{condition.creatorId}
+            </if>
+            <if test="condition.updateTime != null">
+                AND me.update_time = #{condition.updateTime}
+            </if>
+            <if test="condition.updatorId != null">
+                AND me.updator_id = #{condition.updatorId}
+            </if>
+            <if test="condition.startTime != null">
+                <![CDATA[   and DATE_FORMAT(info.create_time, '%Y-%m-%d %H:%i:%s')>=  DATE_FORMAT(#{condition.startTime}, '%Y-%m-%d %H:%i:%s')   ]]>
+            </if>
+            <if test="condition.endTime != null">
+                <![CDATA[   and DATE_FORMAT(info.create_time, '%Y-%m-%d %H:%i:%s')<=  DATE_FORMAT(#{condition.endTime}, '%Y-%m-%d %H:%i:%s')   ]]>
+            </if>
+        </where>
+        ORDER BY info.publish_time DESC
+    </select>
+
+    <select id="findList" resultType="com.cgnpc.bbxpark.message.dto.resp.MessageUserModel">
+        SELECT
+        me.*,
+        us.nick_name,
+        info.title,
+        info.summary,
+        info.remark,
+        info.content,
+        info.link_url,
+        info.publish_time,
+        se.nick_name as publisherName,
+        ty.name as typeName
+        FROM
+        sys_message_user me
+        left join uic_user_info us
+        on me.user_id = us.id
+        left join sys_message_info info
+        on me.msg_id = info.id
+        left join uic_user_info se
+        on info.publisher = se.id
+        <where>
+            <if test="condition.id != null">
+                AND me.id = #{condition.id}
+            </if>
+            <if test="condition.title != null">
+                AND info.title like concat('%',#{condition.title}, '%')
+            </if>
+            <if test="condition.typeId != null">
+                AND info.type_id = #{condition.typeId}
+            </if>
+            <if test="condition.userId != null">
+                AND me.user_id = #{condition.userId}
+            </if>
+            <if test="condition.msgId != null">
+                AND me.msg_id = #{condition.msgId}
+            </if>
+            <if test="condition.readStatus != null">
+                AND me.read_status = #{condition.readStatus}
+            </if>
+            <if test="condition.confirmStatus != null">
+                AND me.confirm_status = #{condition.confirmStatus}
+            </if>
+            <if test="condition.likeStatus != null">
+                AND me.like_status = #{condition.likeStatus}
+            </if>
+            <if test="condition.collectStatus != null">
+                AND me.collect_status = #{condition.collectStatus}
+            </if>
+            <if test="condition.linkParam != null">
+                AND me.link_param = #{condition.linkParam}
+            </if>
+            <if test="condition.replyContent != null">
+                AND me.reply_content = #{condition.replyContent}
+            </if>
+            <if test="condition.status != null and condition.status != 3 and condition.status != 6">
+                AND me.status = #{condition.status}
+            </if>
+            <if test="condition.status == 3">
+                AND me.status != 1
+            </if>
+            <if test="condition.status == 6">
+                AND me.status = 0
+            </if>
+            <if test="condition.createTime != null">
+                AND me.create_time = #{condition.createTime}
+            </if>
+            <if test="condition.creatorId != null">
+                AND me.creator_id = #{condition.creatorId}
+            </if>
+            <if test="condition.updateTime != null">
+                AND me.update_time = #{condition.updateTime}
+            </if>
+            <if test="condition.updatorId != null">
+                AND me.updator_id = #{condition.updatorId}
+            </if>
+            <if test="condition.startTime != null">
+                <![CDATA[   and DATE_FORMAT(info.create_time, '%Y-%m-%d %H:%i:%s')>=  DATE_FORMAT(#{condition.startTime}, '%Y-%m-%d %H:%i:%s')   ]]>
+            </if>
+            <if test="condition.endTime != null">
+                <![CDATA[   and DATE_FORMAT(info.create_time, '%Y-%m-%d %H:%i:%s')<=  DATE_FORMAT(#{condition.endTime}, '%Y-%m-%d %H:%i:%s')   ]]>
+            </if>
+        </where>
+        ORDER BY info.publish_time DESC
+    </select>
+</mapper>

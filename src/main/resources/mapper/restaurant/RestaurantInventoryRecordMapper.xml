@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.restaurant.mapper.RestaurantInventoryRecordRepository">
+    <select id="getInventoryAnalysis" resultType="com.cgnpc.bbxpark.ioc.dto.model.RestaurantInventoryCategoryModel">
+        SELECT
+        medium_category AS category,
+        SUM(stock_quantity) AS stockQty
+        FROM bbx_restaurant_inventory_record
+        WHERE
+        medium_category IS NOT NULL
+        AND stock_quantity IS NOT NULL
+        AND stock_quantity >= 0
+        and deleted = 1
+        <if test="tenantId != null">
+            and tenant_id =#{tenantId}
+        </if>
+        GROUP BY medium_category
+    </select>
+
+</mapper>

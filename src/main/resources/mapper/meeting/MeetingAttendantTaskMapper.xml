@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.meeting.mapper.MeetingAttendantTaskRepository">
+    <select id="pageApp" resultType="com.cgnpc.bbxpark.meeting.dto.model.MeetingAttendantTaskPageModel">
+        SELECT DISTINCT
+        bmat.id,
+        bmat.reserve_id,
+        bmat.reserve_name,
+        bmat.room_id,
+        bmat.room_name,
+        bmat.service_type,
+        bmat.service_status,
+        bmr.meeting_type,
+        bmr.retained_audio,
+        bmr.start_time,
+        bm.swept,
+        bm.used,
+        bmat.create_time
+        FROM bbx_meeting_attendant_task bmat
+        LEFT JOIN bbx_meeting_attendant_room bmar ON bmar.room_id = bmat.room_id
+        LEFT JOIN bbx_meeting_reserve bmr ON bmr.id = bmat.reserve_id
+        LEFT JOIN bbx_meeting_room bm ON bmat.room_id = bm.id
+        <where>
+            <if test="condition.tenantId != null">
+                AND bmr.tenant_id =#{condition.tenantId}
+            </if>
+            <if test="condition.serviceType != null">
+                AND bmat.service_type=#{condition.serviceType}
+            </if>
+            <if test="condition.userId != null">
+                AND bmar.user_id = #{condition.userId}
+            </if>
+            AND bmat.service_valid = 1
+            AND bmar.status = 1
+            AND bmat.service_status != 3
+            AND bmr.draft = 0
+            AND bm.deleted = 1
+        </where>
+        order by bmat.create_time
+        <if test="condition.orderByDirection != null and condition.orderByDirection != ''">
+            ${condition.orderByDirection}
+        </if>
+    </select>
+
+    <select id="pageHistory" resultType="com.cgnpc.bbxpark.meeting.dto.model.MeetingAttendantTaskPageModel">
+        SELECT DISTINCT
+        bmat.id,
+        bmat.reserve_id,
+        bmat.reserve_name,
+        bmat.room_id,
+        bmat.room_name,
+        bmat.service_type,
+        bmat.service_status,
+        bmr.start_time,
+        bmr.end_time,
+        bmat.create_time
+        FROM bbx_meeting_attendant_task bmat
+        LEFT JOIN bbx_meeting_attendant_room bmar ON bmar.room_id = bmat.room_id
+        LEFT JOIN bbx_meeting_reserve bmr ON bmr.id = bmat.reserve_id
+        LEFT JOIN bbx_meeting_room bm ON bmat.room_id = bm.id
+        <where>
+            <if test="condition.tenantId != null">
+                AND bmat.tenant_id =#{condition.tenantId}
+            </if>
+            <if test="condition.serviceType != null">
+                AND bmat.service_type=#{condition.serviceType}
+            </if>
+            <if test="condition.userId != null">
+                AND bmat.handle_uid = #{condition.userId}
+            </if>
+            <if test="condition.startTime != null and condition.endTime != null">
+                AND (#{condition.endTime} >= bmr.end_time and #{condition.startTime} &lt;= bmr.start_time)
+            </if>
+            <if test="condition.roomName != null">
+                AND bmat.room_name like concat('%',#{condition.roomName},'%')
+            </if>
+            <if test="condition.reserveName != null">
+                AND bmat.reserve_name like concat('%',#{condition.reserveName},'%')
+            </if>
+            AND bmat.service_status = 3
+            AND bmat.handle_uid is not null
+            AND bmar.status = 1
+        </where>
+        order by bmat.create_time desc
+    </select>
+
+    <select id="findByCondition" resultType="com.cgnpc.bbxpark.meeting.dto.model.MeetingAttendantTaskModel">
+        SELECT DISTINCT
+        bmat.id,
+        bmat.reserve_id,
+        bmat.room_id,
+        bmat.service_type,
+        bmat.service_status,
+        bmat.service_valid
+        FROM bbx_meeting_attendant_task bmat
+        LEFT JOIN bbx_meeting_reserve bmr ON bmr.id = bmat.reserve_id
+        <where>
+            <if test="condition.roomId != null">
+                AND bmat.room_id =#{roomId}
+            </if>
+            AND bmr.draft = 0
+        </where>
+    </select>
+
+    <select id="findTaskAndReserve" resultType="com.cgnpc.bbxpark.meeting.dto.model.MeetingAttendantTaskAndReserveModel">
+        SELECT DISTINCT
+        bmat.reserve_id,
+        bmr.real_participant_number,
+        bmat.handle_uid
+        FROM bbx_meeting_attendant_task bmat
+        LEFT JOIN bbx_meeting_reserve bmr ON bmr.id = bmat.reserve_id
+        <where>
+            <if test="condition.tenantId != null">
+                AND bmr.tenant_id =#{condition.tenantId}
+            </if>
+            <if test="condition.startTime != null and condition.endTime != null">
+                AND (#{condition.endTime} >= bmr.end_time and #{condition.startTime} &lt;= bmr.start_time)
+            </if>
+            <if test="condition.userIdList != null and condition.userIdList.size() > 0">
+                AND bmat.handle_uid in
+                <foreach collection="condition.userIdList " item="userId" open="(" separator=", "
+                         close=")">
+                    #{userId}
+                </foreach>
+            </if>
+            AND bmr.draft = 0
+            AND bmat.service_status = 3
+            AND bmat.handle_uid is not null
+        </where>
+    </select>
+    <select id="findTask" resultType="com.cgnpc.bbxpark.meeting.dto.model.MeetingAttendantTaskModel">
+        SELECT
+        bmat.id,
+        bmat.reserve_id,
+        bmat.room_id,
+        bmat.service_status,
+        bmat.service_valid,
+        bmat.service_type,
+        bmat.handle_uid
+        FROM bbx_meeting_attendant_task bmat
+        LEFT JOIN bbx_meeting_reserve bmr ON bmr.id = bmat.reserve_id
+        <where>
+            <if test="condition.tenantId != null">
+                AND bmr.tenant_id =#{condition.tenantId}
+            </if>
+            <if test="condition.startTime != null and condition.endTime != null">
+                AND ((bmat.handle_time BETWEEN #{condition.startTime} AND #{condition.endTime}) or (bmat.create_time BETWEEN #{condition.startTime} AND #{condition.endTime}))
+            </if>
+            <if test="condition.userIdList != null and condition.userIdList.size() > 0">
+                AND bmat.handle_uid in
+                <foreach collection="condition.userIdList " item="userId" open="(" separator=", "
+                         close=")">
+                    #{userId}
+                </foreach>
+            </if>
+            AND bmr.draft = 0
+        </where>
+    </select>
+
+    <select id="getMeetingRoomHealth" resultType="com.cgnpc.bbxpark.ioc.dto.model.WeekRoomHealth">
+        <![CDATA[
+        WITH week_dates AS (
+        SELECT TRUNC(SYSDATE, 'IW') - 1 + (LEVEL - 1) AS day_date
+        FROM DUAL
+        CONNECT BY LEVEL <= 7
+        )
+        ]]>
+        SELECT
+        w.day_date AS date,
+        COALESCE(COUNT(t.id), 0) AS count
+        FROM week_dates w
+        LEFT JOIN bbx_meeting_attendant_task t
+        ON TRUNC(t.handle_time) = w.day_date
+        <if test="serviceStatus != null">
+            AND t.service_status =#{serviceStatus}
+        </if>
+        <if test="tenantId != null">
+            AND t.tenant_id =#{tenantId}
+        </if>
+        GROUP BY w.day_date
+        ORDER BY w.day_date;
+    </select>
+</mapper>

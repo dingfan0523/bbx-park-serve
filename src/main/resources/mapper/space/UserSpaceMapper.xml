@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.space.mapper.UserSpaceRepository">
+    <!-- 所有字段 -->
+	<sql id="allColumns">
+		id,user_id,space_id,tenant_id,revision,create_no,create_time,update_no,update_time
+	</sql>
+	<!-- 除主键外所有字段 -->
+	<sql id="allColumnsNoId">
+		user_id,space_id,tenant_id,revision,create_no,create_time,update_no,update_time
+	</sql>
+	<!-- 所有的对象属性 -->
+	<sql id="allProperties">
+		#{id},#{userId},#{spaceId},#{tenantId},#{revision},#{createNo},#{createTime},#{updateNo},#{updateTime}
+	</sql>
+	<!-- 除主键对象属性外所有属性 -->
+	<sql id="allPropertiesNoId">
+		#{userId},#{spaceId},#{tenantId},#{revision},#{createNo},#{createTime},#{updateNo},#{updateTime}
+	</sql>
+	<!-- 公共条件 -->
+	<sql id="condition">
+		<where>
+			<if test="id != null">
+				AND id = #{id}
+			</if>
+			<if test="userId != null">
+				AND user_id = #{userId}
+			</if>
+			<if test="spaceId != null">
+				AND space_id = #{spaceId}
+			</if>
+			<if test="tenantId != null">
+				AND tenant_id = #{tenantId}
+			</if>
+			<if test="revision != null">
+				AND revision = #{revision}
+			</if>
+			<if test="createNo != null">
+				AND create_no = #{createNo}
+			</if>
+			<if test="createTime != null">
+				AND create_time = #{createTime}
+			</if>
+			<if test="updateNo != null">
+				AND update_no = #{updateNo}
+			</if>
+			<if test="updateTime != null">
+				AND update_time = #{updateTime}
+			</if>
+			<if test="ids != null">
+				AND id in
+				<foreach collection="ids" item="id" open="(" separator="," close=")">
+					#{id}
+				</foreach>
+			</if>
+		</where>
+	</sql>
+	<update id="updateParam" parameterType="java.util.Map">
+		UPDATE bbx_user_space
+		<set>
+			<if test="userSpace.userId != null">	 user_id = #{userSpace.userId},	</if>
+			<if test="userSpace.spaceId != null">	 space_id = #{userSpace.spaceId},	</if>
+			<if test="userSpace.tenantId != null">	 tenant_id = #{userSpace.tenantId},	</if>
+			<if test="userSpace.revision != null">	 revision = #{userSpace.revision},	</if>
+			<if test="userSpace.createNo != null">	 create_no = #{userSpace.createNo},	</if>
+			<if test="userSpace.createTime != null">	 create_time = #{userSpace.createTime},	</if>
+			<if test="userSpace.updateNo != null">	 update_no = #{userSpace.updateNo},	</if>
+            <if test="userSpace.updateTime != null">	 update_time = #{userSpace.updateTime}	</if>
+		</set>
+		<include refid="condition"/>
+	</update>
+	<!-- 根据条件删除记录 -->
+	<delete id="deleteParam" parameterType="java.util.Map">
+		DELETE FROM
+			bbx_user_space
+		<include refid="condition"/>
+	</delete>
+	<!-- 根据条件统计数据条数 -->
+	<select id="countParam" resultType="int">
+		SELECT
+		COUNT(id)
+		FROM
+		bbx_user_space
+		WHERE
+			user_id = #{condition.userId} AND tenant_id = #{condition.tenantId}
+	</select>
+	<select id="findUserInfoBySpace" resultType="com.cgnpc.bbxpark.space.dto.model.UserInfoModel">
+		select distinct
+        tm.user_id AS id,
+        tm.staff_name AS userName
+        from uic_tenant_member tm
+        left join  bbx_user_space us on us.user_id = tm.user_id
+		<where>
+            <if test="condition.tenantId != null">
+                and tm.tenant_id =#{condition.tenantId}
+            </if>
+			<if test="condition.spaceId != null">
+				and us.space_id =#{condition.spaceId}
+			</if>
+			<if test="condition.spaceIds != null and condition.spaceIds.size() > 0">
+				AND us.space_id in
+				<foreach collection="condition.spaceIds " item="spaceId" open="(" separator=", "
+						 close=")">
+					#{spaceId}
+				</foreach>
+			</if>
+			<if test="condition.userName != null and condition.userName != ''">
+				AND tm.staff_name like concat('%',#{condition.userName},'%')
+			</if>
+		</where>
+	</select>
+</mapper>

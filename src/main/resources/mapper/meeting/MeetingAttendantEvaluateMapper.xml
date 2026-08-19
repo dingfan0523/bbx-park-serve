@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.meeting.mapper.MeetingAttendantEvaluateRepository">
+
+    <select id="findScoreByReserve" resultType="com.cgnpc.bbxpark.meeting.domain.MeetingAttendantEvaluate">
+        select
+        bmae.id,
+        bmae.score
+        from bbx_meeting_attendant_evaluate bmae
+        LEFT JOIN bbx_meeting_reserve bmr ON bmr.id = bmae.reserve_id
+        <where>
+            <if test="condition.tenantId != null">
+                AND bmr.tenant_id =#{condition.tenantId}
+            </if>
+            <if test="condition.startTime != null and condition.endTime != null">
+                AND (#{condition.endTime} >= bmae.create_time and #{condition.startTime} &lt;= bmae.create_time)
+            </if>
+            AND bmr.draft = 0
+        </where>
+    </select>
+    <select id="findScoreByTask" resultType="com.cgnpc.bbxpark.meeting.dto.model.MeetingAttendantTaskAndReserveModel">
+        SELECT DISTINCT
+        bmae.id,
+        bmae.score,
+        bmat.handle_uid
+        from bbx_meeting_attendant_evaluate bmae
+        LEFT JOIN bbx_meeting_attendant_task bmat ON bmat.reserve_id = bmae.reserve_id
+        <where>
+            <if test="condition.tenantId != null">
+                AND bmat.tenant_id =#{condition.tenantId}
+            </if>
+            <if test="condition.startTime != null and condition.endTime != null">
+                AND (#{condition.endTime} >= bmae.create_time and #{condition.startTime} &lt;= bmat.create_time)
+            </if>
+            <if test="condition.userIdList != null and condition.userIdList.size() > 0">
+                AND bmat.handle_uid in
+                <foreach collection="condition.userIdList " item="userId" open="(" separator=", "
+                         close=")">
+                    #{userId}
+                </foreach>
+            </if>
+            AND bmat.service_status = 3
+            AND bmat.handle_uid is not null
+        </where>
+    </select>
+
+    <select id="pageByUserId" resultType="com.cgnpc.bbxpark.meeting.dto.model.MeetingAttendantEvaluateDetailModel">
+        SELECT DISTINCT
+        bmae.id,
+        bmae.score,
+        bmae.content,
+        bmae.operate_uid,
+        bmae.operate_uname,
+        bmae.operate_staffid,
+        bmae.create_time,
+        bmat.room_id,
+        bmat.room_name,
+        bmat.reserve_id,
+        bmat.reserve_name,
+        bmat.handle_uid,
+        bmat.handle_uname,
+        bmat.handle_staffid
+        from bbx_meeting_attendant_evaluate bmae
+        LEFT JOIN bbx_meeting_attendant_task bmat ON bmat.reserve_id = bmae.reserve_id
+        <where>
+            <if test="condition.tenantId != null">
+                AND bmae.tenant_id =#{condition.tenantId}
+            </if>
+            <if test="condition.startTime != null and condition.endTime != null">
+                AND (#{condition.endTime} >= bmae.create_time and #{condition.startTime} &lt;= bmae.create_time)
+            </if>
+            <if test="condition.reserveName != null">
+                AND bmat.reserve_name like concat('%',#{condition.reserveName},'%')
+            </if>
+            <if test="condition.userId != null">
+                AND bmat.handle_uid =#{condition.userId}
+            </if>
+            <if test="condition.roomId != null">
+                AND bmat.room_id =#{condition.roomId}
+            </if>
+            <if test="condition.userIdList != null and condition.userIdList.size() > 0">
+                AND bmat.handle_uid in
+                <foreach collection="condition.userIdList " item="userId" open="(" separator=", "
+                         close=")">
+                    #{userId}
+                </foreach>
+            </if>
+            AND bmat.service_status = 3
+            AND bmat.handle_uid is not null
+        </where>
+        order by
+        <if test="condition.sortOrder != null and condition.sortOrder != ''">
+            bmae.score ${condition.sortOrder},
+        </if>
+        bmae.create_time DESC
+    </select>
+
+    <select id="getAvgScore" resultType="java.lang.Double">
+        SELECT ROUND(AVG(score),1) FROM bbx_meeting_attendant_evaluate
+        WHERE deleted = 1 AND tenant_id = #{tenantId}
+    </select>
+
+    <select id="findAvgScoreByAttendant" resultType="com.cgnpc.bbxpark.ioc.dto.model.ServiceStaffWorkload">
+        SELECT
+        staffId,
+        ROUND(SUM(score) / COUNT(1), 1) AS avgScore
+        FROM (
+        SELECT DISTINCT t.handle_uid AS staffId, e.id, e.score
+        FROM bbx_meeting_attendant_task t
+        INNER JOIN bbx_meeting_attendant_evaluate e
+        ON t.reserve_id = e.reserve_id
+        WHERE t.service_status = 3
+        <if test="tenantId != null">
+            AND t.tenant_id =#{tenantId}
+        </if>
+        <if test="tenantId != null">
+            AND e.tenant_id =#{tenantId}
+        </if>
+        <if test="startTime != null and endTime != null">
+            AND (#{endTime} >= e.create_time and #{startTime} &lt;= e.create_time)
+        </if>
+        <if test="userIds != null and userIds.size() > 0">
+            AND t.handle_uid in
+            <foreach collection="userIds " item="userId" open="(" separator=", "
+                     close=")">
+                #{userId}
+            </foreach>
+        </if>
+        ) tmp
+        GROUP BY staffId;
+    </select>
+</mapper>

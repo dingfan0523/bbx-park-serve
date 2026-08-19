@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.message.mapper.MessageTemplateRepository">
+    <select id="findUserList" resultType="com.cgnpc.bbxpark.message.dto.resp.MessageUserInfoModel">
+        SELECT id,outer_email email, UNIOCOMPHONE mobile, staff_name nickName, staff_sex sexDesc, staff_no staffid, third_user_id
+        FROM uic_cud_user_info
+        <where>
+            <if test="condition.id != null and condition.id != ''">
+                and id =#{condition.id}
+            </if>
+            <if test="condition.ids != null and condition.ids.size() > 0">
+                and id in
+                <foreach collection="condition.ids " item="id" open="(" separator=", "
+                         close=")">
+                    #{id}
+                </foreach>
+            </if>
+        </where>
+    </select>
+
+<!--    <select id="findRoleList" resultType="com.cgnpc.bbxpark.message.dto.resp.MessageRoleModel">-->
+<!--        SELECT id, name, code, status, tenant_id-->
+<!--        FROM aas_role_info-->
+<!--        <where>-->
+<!--            <if test="condition.id != null and condition.id != ''">-->
+<!--                and id =#{condition.id}-->
+<!--            </if>-->
+<!--            <if test="condition.tenantId != null">-->
+<!--                and tenant_id =#{condition.tenantId}-->
+<!--            </if>-->
+<!--            <if test="condition.status != null">-->
+<!--                and status =#{condition.status}-->
+<!--            </if>-->
+<!--            <if test="condition.name != null and condition.name != ''">-->
+<!--                and name like concat('%',#{condition.name},'%')-->
+<!--            </if>-->
+<!--            <if test="condition.ids != null and condition.ids.size() > 0">-->
+<!--                and id in-->
+<!--                <foreach collection="condition.ids " item="id" open="(" separator=", "-->
+<!--                         close=")">-->
+<!--                    #{id}-->
+<!--                </foreach>-->
+<!--            </if>-->
+<!--        </where>-->
+<!--        order by create_time desc-->
+<!--    </select>-->
+
+</mapper>

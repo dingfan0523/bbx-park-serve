@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cgnpc.qrtz.mapper.LogTimeoutNotifyMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.cgnpc.qrtz.model.LogTimeoutNotify">
+        <id column="NOTIFICATION_ID" property="notificationId" />
+        <result column="PROC_INST_ID" property="procInstId" />
+        <result column="PRIORITY" property="priority" />
+        <result column="PROC_ID" property="procId" />
+        <result column="PROC_NAME" property="procName" />
+        <result column="PROC_VERSION" property="procVersion" />
+        <result column="ACT_ID" property="actId" />
+        <result column="ACT_PRE_CONFIG_ID" property="actPreConfigId" />
+        <result column="ACT_NAME" property="actName" />
+        <result column="PROC_INS_ACT_ID" property="procInsActId" />
+        <result column="PSC_MODEL_ID" property="pscModelId" />
+        <result column="PROC_TITLE" property="procTitle" />
+        <result column="FORM_ID" property="formId" />
+        <result column="FORM_VERSION" property="formVersion" />
+        <result column="DATA_MODEL_ID" property="dataModelId" />
+        <result column="DELETE_FLAG" property="deleteFlag" />
+        <result column="CREATE_USER_NO" property="createUserNo" />
+        <result column="CREATE_USER_NAME" property="createUserName" />
+        <result column="CREATE_DATE" property="createDate" />
+        <result column="NOTIFY_DATE" property="notifyDate" />
+        <result column="NOTIFY_WAY" property="notifyWay" />
+        <result column="RECEIVER" property="receiver" />
+        <result column="MODIFY_USER_NO" property="modifyUserNo" />
+        <result column="MODIFY_USER_NAME" property="modifyUserName" />
+        <result column="MODIFY_DATE" property="modifyDate" />
+        <result column="EXPIRE_TIME_NOTIFY_WAY" property="expireTimeNotifyWay" />
+        <result column="EXPIRE_TIME" property="expireTime" />
+        <result column="OVERTIME_NOTIFY_WAY" property="overTimeNotifyWay" />
+        <result column="OVERTIME" property="overTime" />
+        <result column="EXPIRE_DAYS" property="expireDays" />
+        <result column="EXPIRE_HOURS" property="expireHours" />
+        <result column="OVERTIME_DAYS" property="overtimeDays" />
+        <result column="OVERTIME_HOURS" property="overtimeHours" />
+        <result column="EXPIRE_TIME_INTERVAL" property="expireTimeInterval" />
+        <result column="OVERTIME_INTERVAL" property="overTimeInterval" />
+        <result column="STATUS" property="status" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        PROC_INST_ID, PRIORITY, PROC_ID, PROC_NAME, PROC_VERSION, ACT_ID, ACT_PRE_CONFIG_ID, ACT_NAME, PROC_INS_ACT_ID,
+        PSC_MODEL_ID, PROC_TITLE, FORM_ID, FORM_VERSION, DATA_MODEL_ID, DELETE_FLAG, CREATE_USER_NO, CREATE_USER_NAME,
+        CREATE_DATE, NOTIFY_DATE, NOTIFY_WAY, RECEIVER, MODIFY_USER_NO, MODIFY_USER_NAME, MODIFY_DATE,
+        EXPIRE_TIME_NOTIFY_WAY, EXPIRE_TIME, OVERTIME_NOTIFY_WAY, OVERTIME, EXPIRE_DAYS, EXPIRE_HOURS, OVERTIME_DAYS,
+        OVERTIME_HOURS, EXPIRE_TIME_INTERVAL, OVERTIME_INTERVAL, NOTIFICATION_ID, STATUS
+    </sql>
+
+    <!-- 根据节点ID取最新的一条 -->
+    <select id="findLastest" resultMap="BaseResultMap">
+        SELECT
+            MAX( NOTIFY_DATE ) AS OPERATE_DATE,notify.*
+        FROM
+            cud_log_timeout_notify notify
+        WHERE
+            STATUS = 'success'
+        <if test="notifyDate != null">
+            AND NOTIFY_DATE>#{notifyDate}
+        </if>
+        GROUP BY
+            ACT_ID
+        ORDER BY
+            OPERATE_DATE DESC
+    </select>
+</mapper>

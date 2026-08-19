@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.restaurant.mapper.CompartmentReserveRepository">
+    <select id="pageReserve"
+            resultType="com.cgnpc.bbxpark.restaurant.dto.model.CompartmentReserveModel">
+        select
+        bcr.id,
+        bcr.compartment_id,
+        bcr.compartment_name,
+        bcr.reserve_start_time,
+        bcr.reserve_end_time,
+        bcr.reserve_status,
+        bcr.subscriber_id,
+        bcr.subscriber_name,
+        bcr.subscriber_staffid,
+        bcr.phone,
+        bcr.combo_id,
+        bcr.combo_name,
+        bcr.use_time,
+        bcr.reserve_source,
+        bcr.create_time
+        from bbx_compartment_reserve bcr
+        JOIN bbx_compartment bc ON bcr.compartment_id = bc.id
+        where bcr.deleted = 1
+        <if test="condition.tenantId != null">
+            AND bcr.tenant_id =#{condition.tenantId}
+        </if>
+        <if test="condition.reserveSource != null">
+            AND bcr.reserve_source =#{condition.reserveSource}
+        </if>
+        <if test="condition.reserveStatus != null">
+            AND bcr.reserve_status =#{condition.reserveStatus}
+        </if>
+        <if test="condition.reserveStatusList != null">
+            AND bcr.reserve_status in
+            <foreach collection="condition.reserveStatusList " item="reserveStatus" open="(" separator=", "
+                     close=")">
+                #{reserveStatus}
+            </foreach>
+        </if>
+        <if test="condition.compartmentIdList != null">
+            AND bcr.compartment_id in
+            <foreach collection="condition.compartmentIdList " item="compartmentId" open="(" separator=", "
+                     close=")">
+                #{compartmentId}
+            </foreach>
+        </if>
+        <if test="condition.compartmentId != null">
+            AND bcr.compartment_id =#{condition.compartmentId}
+        </if>
+        <if test="condition.spaceIdList != null">
+            AND bc.space_id in
+            <foreach collection="condition.spaceIdList " item="spaceId" open="(" separator=", "
+                     close=")">
+                #{spaceId}
+            </foreach>
+        </if>
+        <if test="condition.spaceId != null">
+            AND bc.space_id =#{condition.spaceId}
+        </if>
+        <if test="condition.restaurantId != null">
+            AND bc.restaurant_id =#{condition.restaurantId}
+        </if>
+        <if test="condition.comboId != null">
+            AND bcr.combo_id =#{condition.comboId}
+        </if>
+        <if test="condition.subscriberName != null">
+            AND (bcr.subscriber_name like concat('%',#{condition.subscriberName},'%') or bcr.subscriber_staffid =#{condition.subscriberName})
+        </if>
+        <if test="condition.subscriberId != null">
+            AND bcr.subscriber_id =#{condition.subscriberId}
+        </if>
+        <if test="condition.reserveStartTime != null and condition.reserveEndTime != null">
+            AND (#{condition.reserveStartTime} &lt;= bcr.reserve_start_time and #{condition.reserveEndTime} >= bcr.reserve_end_time)
+        </if>
+        order by bcr.create_time DESC
+    </select>
+
+    <select id="findReserve"
+            resultType="com.cgnpc.bbxpark.restaurant.dto.model.CompartmentReserveModel">
+        select
+        bcr.id,
+        bcr.compartment_id,
+        bcr.reserve_start_time,
+        bcr.reserve_end_time,
+        bcr.reserve_status
+        from bbx_compartment_reserve bcr
+        JOIN bbx_compartment bc ON bcr.compartment_id = bc.id
+        <where>
+            bcr.deleted = 1
+            <if test="condition.tenantId != null">
+                AND bcr.tenant_id =#{condition.tenantId}
+            </if>
+            <if test="condition.reserveSource != null">
+                AND bcr.reserve_source =#{condition.reserveSource}
+            </if>
+            <if test="condition.reserveStatus != null">
+                AND bcr.reserve_status =#{condition.reserveStatus}
+            </if>
+            <if test="condition.reserveStatusList != null">
+                AND bcr.reserve_status in
+                <foreach collection="condition.reserveStatusList " item="reserveStatus" open="(" separator=", "
+                         close=")">
+                    #{reserveStatus}
+                </foreach>
+            </if>
+            <if test="condition.compartmentIdList != null">
+                AND bcr.compartment_id in
+                <foreach collection="condition.compartmentIdList " item="compartmentId" open="(" separator=", "
+                         close=")">
+                    #{compartmentId}
+                </foreach>
+            </if>
+            <if test="condition.compartmentId != null">
+                AND bcr.compartment_id =#{condition.compartmentId}
+            </if>
+            <if test="condition.spaceIdList != null">
+                AND bc.space_id in
+                <foreach collection="condition.spaceIdList " item="spaceId" open="(" separator=", "
+                         close=")">
+                    #{spaceId}
+                </foreach>
+            </if>
+            <if test="condition.spaceId != null">
+                AND bc.space_id =#{condition.spaceId}
+            </if>
+            <if test="condition.restaurantId != null">
+                AND bc.restaurant_id =#{condition.restaurantId}
+            </if>
+            <if test="condition.comboId != null">
+                AND bcr.combo_id =#{condition.comboId}
+            </if>
+            <if test="condition.subscriberId != null">
+                AND bcr.subscriber_id =#{condition.subscriberId}
+            </if>
+            <if test="condition.subscriberName != null">
+                AND ( bcr.subscriber_name like concat('%',#{condition.subscriberName},'%') or bcr.subscriber_staffid =#{condition.subscriberName} )
+            </if>
+            <if test="condition.reserveStartTime != null and condition.reserveEndTime != null">
+                AND (#{condition.reserveStartTime} &lt;= bcr.reserve_start_time and #{condition.reserveEndTime} >= bcr.reserve_end_time)
+            </if>
+        </where>
+        order by bcr.reserve_start_time
+    </select>
+
+    <select id="findByTime" resultType="com.cgnpc.bbxpark.restaurant.dto.model.CompartmentReserveModel">
+        select
+        bcr.id,
+        bcr.compartment_id,
+        bcr.reserve_start_time,
+        bcr.reserve_end_time,
+        bcr.reserve_status
+        from bbx_compartment_reserve bcr
+        where bcr.deleted = 1
+        <if test="condition.tenantId != null">
+            and bcr.tenant_id =#{condition.tenantId}
+        </if>
+        <if test="condition.id !=null">
+            and bcr.id != #{condition.id}
+        </if>
+        <if test="condition.compartmentId != null">
+            AND bcr.compartment_id =#{condition.compartmentId}
+        </if>
+        <if test="condition.reserveStatusList != null">
+            AND bcr.reserve_status in
+            <foreach collection="condition.reserveStatusList " item="reserveStatus" open="(" separator=", "
+                     close=")">
+                #{reserveStatus}
+            </foreach>
+        </if>
+        <if test="condition.reserveStartTime != null and condition.reserveEndTime != null">
+            and (#{condition.reserveEndTime} >= bcr.reserve_start_time and #{condition.reserveStartTime} &lt;= bcr.reserve_end_time)
+        </if>
+    </select>
+    <select id="getCompartmentReserveTrend" resultType="com.cgnpc.bbxpark.ioc.dto.model.RestaurantCompartmentReserveModel">
+        SELECT
+        TO_CHAR(TRUNC(reserve_start_time), 'MM-dd') AS time,
+        COUNT(*) AS totalNum
+        FROM bbx_compartment_reserve WHERE deleted = 1
+        <if test="tenantId != null">
+            and tenant_id =#{tenantId}
+        </if>
+        AND
+        reserve_status != 40
+        AND reserve_start_time >= DATEADD(DAY, -29, SYSDATE)
+        AND reserve_start_time &lt;= SYSDATE
+        GROUP BY TRUNC(reserve_start_time)
+    </select>
+
+</mapper>

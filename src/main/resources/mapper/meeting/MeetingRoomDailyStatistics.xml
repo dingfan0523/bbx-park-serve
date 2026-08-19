@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.meeting.mapper.MeetingRoomDailyStatisticsRepository">
+    <select id="getMeetingRoomUtilizationAnalysis" resultType="com.cgnpc.bbxpark.ioc.dto.model.MeetingRoomUtilizationAnalysisModel">
+        SELECT TRUNC(statistics_time) AS date,
+        COALESCE(ROUND(AVG(utilization_rate),2),0) AS useRate
+        FROM bbx_meeting_room_daily_statistics
+        WHERE statistics_time >= TRUNC(SYSDATE) - 30
+        <if test="tenantId != null">
+            AND tenant_id = #{tenantId}
+        </if>
+        GROUP BY TRUNC(statistics_time) ORDER BY date
+    </select>
+
+    <select id="getMeetingRoomAvgRate" resultType="com.cgnpc.bbxpark.meeting.dto.model.MeetingRoomAvgRateModel">
+        SELECT room_id AS id,
+        COALESCE(ROUND(AVG(utilization_rate),2),0) AS avgRate
+        FROM bbx_meeting_room_daily_statistics
+        WHERE statistics_time >= TRUNC(SYSDATE) - 30
+        <if test="tenantId != null">
+            AND tenant_id = #{tenantId}
+        </if>
+        GROUP BY room_id ORDER BY avgRate DESC
+    </select>
+</mapper>

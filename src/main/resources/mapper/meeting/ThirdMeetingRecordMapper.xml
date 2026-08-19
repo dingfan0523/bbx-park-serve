@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cgnpc.bbxpark.meeting.mapper.ThirdMeetingRecordRepository">
+    <select id="getSpecialMeetingOverview" resultType="com.cgnpc.bbxpark.ioc.dto.model.SpecialMeetingOverview">
+        SELECT
+            COUNT(*) AS totalMeetingCount,
+            ROUND(AVG(duration),1) AS avgMeetingDuration,
+            COUNT(CASE WHEN media_type = 1 THEN 1 END) AS videoMeetingCount,
+            COUNT(CASE WHEN media_type = 3 THEN 1 END) AS localMeetingCount
+        FROM bbx_third_meeting_record WHERE tenant_id = #{tenantId} AND deleted = 1
+    </select>
+
+    <select id="getMeetingRoomUsageRanking" resultType="com.cgnpc.bbxpark.ioc.dto.model.MeetingRoomUse">
+        SELECT room_name AS roomName,
+        COUNT(*) AS useCount
+        FROM bbx_third_meeting_record WHERE tenant_id = #{tenantId} AND deleted = 1
+        GROUP BY room_name ORDER BY useCount ${sortOrder} LIMIT 5
+    </select>
+
+    <select id="getMeetingBehaviorInsight" resultType="java.util.Map">
+        <![CDATA[
+        SELECT COUNT(CASE WHEN duration <= 1 THEN 1 END) AS r1,
+        COUNT(CASE WHEN duration > 1 AND duration <= 2 THEN 1 END) AS r2,
+        COUNT(CASE WHEN duration > 2 AND duration <= 3 THEN 1 END) AS r3,
+        COUNT(CASE WHEN duration > 3 THEN 1 END) AS r4
+        FROM bbx_third_meeting_record WHERE tenant_id = #{tenantId} AND deleted = 1
+        ]]>
+    </select>
+
+    <select id="getDepartmentActivity" resultType="com.cgnpc.bbxpark.ioc.dto.model.DepartmentActivity$DepartmentMeeting">
+        SELECT department_name deptName,
+        COUNT(*) AS count
+        FROM bbx_third_meeting_record WHERE tenant_id = #{tenantId} AND deleted = 1
+        GROUP BY deptName ORDER BY count DESC
+    </select>
+
+
+</mapper>

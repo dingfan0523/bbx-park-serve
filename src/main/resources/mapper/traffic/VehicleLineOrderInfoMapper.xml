@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.traffic.mapper.VehicleLineOrderInfoRepository">
+    <select id="getShuttleOverview" resultType="com.cgnpc.bbxpark.ioc.dto.model.ShuttleOverviewModel">
+        SELECT
+        COALESCE(COUNT(DISTINCT line_name),0) AS lineTotal,
+        COALESCE(COUNT(*), 0) AS count
+        FROM dwd_vehicle_line_order_info WHERE actual_pay_time BETWEEN #{start} AND #{end}
+    </select>
+
+    <select id="getShuttleRunOrgAnalysis" resultType="com.cgnpc.bbxpark.ioc.dto.model.ShuttleRunOrgStatModel">
+        SELECT
+        COALESCE(run_org,'其他') AS runOrg,
+        COUNT(*) AS count,
+        ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(),2) AS ratio
+        FROM dwd_vehicle_line_order_info
+        WHERE actual_pay_time BETWEEN #{start} AND #{end}
+        GROUP BY COALESCE(run_org,'其他')
+    </select>
+
+    <select id="getShuttleHotLine" resultType="com.cgnpc.bbxpark.ioc.dto.model.ShuttleHotLineModel">
+        SELECT
+        line_name AS lineName,
+        COUNT(*) AS count
+        FROM dwd_vehicle_line_order_info
+        WHERE actual_pay_time BETWEEN #{start} AND #{end}
+        GROUP BY line_name
+        ORDER BY count DESC
+        LIMIT 5
+    </select>
+
+    <select id="getShuttleHotStation" resultType="com.cgnpc.bbxpark.ioc.dto.model.ShuttleHotStationModel">
+        WITH station_count AS (
+        SELECT start_station AS station, COUNT(*) AS cnt
+        FROM dwd_vehicle_line_order_info
+        WHERE actual_pay_time BETWEEN #{start} AND #{end}
+        GROUP BY start_station
+        UNION ALL
+        SELECT end_station AS station, COUNT(*) AS cnt
+        FROM dwd_vehicle_line_order_info
+        WHERE actual_pay_time BETWEEN #{start} AND #{end}
+        GROUP BY end_station
+        )
+        SELECT
+        station,
+        SUM(cnt) AS count
+        FROM station_count
+        WHERE station IS NOT NULL AND station != ''
+        GROUP BY station
+        ORDER BY count DESC
+        LIMIT 5;
+    </select>
+</mapper>

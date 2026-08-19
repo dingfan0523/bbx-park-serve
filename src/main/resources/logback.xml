@@ -1,0 +1,441 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- 配置全局变量以及依赖 -->
+    <!--定义日志文件的存储地址 勿在 LogBack 的配置中使用相对路径-->
+    <!--日志路径 格式：磁盘日志路径+项目组名称，例子：/appdemo-->
+    <!--<property name="LOG_HOME" value="/log/demo2"/>-->
+    <!-- 应用的名称 -->
+    <property name="APP_NAME" value="demo2"/>
+
+    <property name="log.path" value="/data/logs/cgnpc" />
+	<property name="log.pattern" value="%d{HH:mm:ss.SSS} [%thread] %-5level %logger{20} - [%method,%line] - %msg%n" />
+
+	<!-- 控制台输出 -->
+	<appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder>
+			<pattern>${log.pattern}</pattern>
+		</encoder>
+	</appender>
+	
+	<!-- 系统日志输出 -->
+	<appender name="file_info" class="ch.qos.logback.core.rolling.RollingFileAppender">
+	    <file>${log.path}/sys-info.log</file>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<!-- 按天回滚 daily -->
+			<fileNamePattern>${log.path}/sys-info.%d{yyyy-MM-dd}.log</fileNamePattern>
+			<!-- 日志最大的历史 60天 -->
+			<maxHistory>60</maxHistory>
+		</rollingPolicy>
+		<encoder>
+			<pattern>${log.pattern}</pattern>
+		</encoder>
+		<filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>INFO</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+	</appender>
+	
+	<appender name="file_error" class="ch.qos.logback.core.rolling.RollingFileAppender">
+	    <file>${log.path}/sys-error.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${log.path}/sys-error.%d{yyyy-MM-dd}.log</fileNamePattern>
+			<!-- 日志最大的历史 60天 -->
+			<maxHistory>60</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${log.pattern}</pattern>
+        </encoder>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>ERROR</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+	
+	<!-- 用户访问日志输出  -->
+    <appender name="sys-user" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${log.path}/sys-user.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- 按天回滚 daily -->
+            <fileNamePattern>${log.path}/sys-user.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <!-- 日志最大的历史 60天 -->
+            <maxHistory>60</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${log.pattern}</pattern>
+        </encoder>
+    </appender>
+	
+	<!-- 显示形成的sql、使用的参数、结果集 -->
+	<!--
+		<logger name="java.sql" level="debug" />
+		<logger name="org.springframework.jdbc" level="debug" />
+	-->
+
+	<logger name="com.cgnpc" level="debug" />
+
+    <logger name="org.pac4j" level="debug" />
+
+	<root level="debug">
+		<appender-ref ref="console" />
+	</root>
+	
+	<!--系统操作日志-->
+    <root level="info">
+        <appender-ref ref="file_info" />
+        <appender-ref ref="file_error" />
+    </root>
+	
+	<!--系统用户操作日志-->
+    <logger name="sys-user" level="info">
+        <appender-ref ref="sys-user"/>
+    </logger>
+
+	<!-- 隐藏Swagger 启动时生成器日志打印-->
+	<logger name="springfox.documentation.spring.web.readers.operation.CachingOperationNameGenerator" level="OFF" additivity="false"/>
+
+	<!-- 设置mybatis 映射器警告日志级别-->
+	<logger name="org.mybatis.spring.mapper.ClassPathMapperScanner" level="error"/>
+
+	<!-- 设置spring Bean后置处理器 日志打印级别-->
+	<logger name="org.springframework.context.support.PostProcessorRegistrationDelegate" level="error"/>
+
+    <!-- 监控日志配置 start -->
+    <property name="API_REQ_IND_LOG_PATH" value="/data/cud/monitor/logs/apiReqIndLogs" />
+	<property name="CLIENT_ENV_IND_LOG_PATH" value="/data/cud/monitor/logs/clientEnvIndLogs" />
+	<property name="JS_ERROR_IND_LOG_PATH" value="/data/cud/monitor/logs/jsErrorIndLogs" />
+	<property name="PAGE_ACCESS_IND_LOG_PATH" value="/data/cud/monitor/logs/pageAccessIndLogs" />
+	<property name="PAGE_LOAD_IND_LOG_PATH" value="/data/cud/monitor/logs/pageLoadIndLogs" />
+	<property name="WEB_CMPT_IND_LOG_PATH" value="/data/cud/monitor/logs/webCmptIndLogs" />
+	<property name="LOGIN_LOG_PATH" value="/data/cud/monitor/logs/loginLogs" />
+	<property name="OPT_LOG_PATH" value="/data/cud/monitor/logs/optLogs" />
+	<property name="EXP_LOG_PATH" value="/data/cud/monitor/logs/expLogs" />
+	<property name="SQL_LOG_PATH" value="/data/cud/monitor/logs/sqlLogs" />
+	<property name="BACKEND_CMPT_LOG_PATH" value="/data/cud/monitor/logs/backendCmptLogs" />
+	<property name="SECURITY_LOG_PATH" value="/data/cud/monitor/logs/securityLogs" />
+	<property name="AUDIT_LOG_PATH" value="/data/cud/monitor/logs/auditLogs" />
+	<property name="COMPONENT_LOG_PATH" value="/data/cud/monitor/logs/componentLogs" />
+
+	<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+			<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n</pattern>
+		</encoder>
+	</appender>
+
+	<appender name="API_REQ_IND" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<FileNamePattern>${API_REQ_IND_LOG_PATH}/apiReqInd.%d{yyyy-MM-dd}.log
+			</FileNamePattern>
+			<MaxHistory>30</MaxHistory>
+		</rollingPolicy>
+		<encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+			<pattern>%msg%n</pattern>
+		</encoder>
+	</appender>
+	
+	<appender name="CLIENT_ENV_IND" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<FileNamePattern>${CLIENT_ENV_IND_LOG_PATH}/clientEnvInd.%d{yyyy-MM-dd}.log
+			</FileNamePattern>
+			<MaxHistory>30</MaxHistory>
+		</rollingPolicy>
+		<encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+			<pattern>%msg%n</pattern>
+		</encoder>
+	</appender>
+	
+	<appender name="JS_ERROR_IND" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<FileNamePattern>${JS_ERROR_IND_LOG_PATH}/jsErrorInd.%d{yyyy-MM-dd}.log
+			</FileNamePattern>
+			<MaxHistory>30</MaxHistory>
+		</rollingPolicy>
+		<encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+			<pattern>%msg%n</pattern>
+		</encoder>
+	</appender>
+	
+	<appender name="PAGE_ACCESS_IND" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<FileNamePattern>${PAGE_ACCESS_IND_LOG_PATH}/pageAccessInd.%d{yyyy-MM-dd}.log
+			</FileNamePattern>
+			<MaxHistory>30</MaxHistory>
+		</rollingPolicy>
+		<encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+			<pattern>%msg%n</pattern>
+		</encoder>
+	</appender>
+	
+	<appender name="PAGE_LOAD_IND" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<FileNamePattern>${PAGE_LOAD_IND_LOG_PATH}/pageLoadInd.%d{yyyy-MM-dd}.log
+			</FileNamePattern>
+			<MaxHistory>30</MaxHistory>
+		</rollingPolicy>
+		<encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+			<pattern>%msg%n</pattern>
+		</encoder>
+	</appender>
+	
+	<appender name="WEB_CMPT_IND" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<FileNamePattern>${WEB_CMPT_IND_LOG_PATH}/webCmptInd.%d{yyyy-MM-dd}.log
+			</FileNamePattern>
+			<MaxHistory>30</MaxHistory>
+		</rollingPolicy>
+		<encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+			<pattern>%msg%n</pattern>
+		</encoder>
+	</appender>
+
+	<appender name="LOGIN_LOG" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<FileNamePattern>${LOGIN_LOG_PATH}/loginLog.%d{yyyy-MM-dd}.log
+			</FileNamePattern>
+			<MaxHistory>30</MaxHistory>
+		</rollingPolicy>
+		<encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+			<pattern>%msg%n</pattern>
+		</encoder>
+	</appender>
+	
+	<appender name="OPT_LOG" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<FileNamePattern>${OPT_LOG_PATH}/optLog.%d{yyyy-MM-dd}.log
+			</FileNamePattern>
+			<MaxHistory>30</MaxHistory>
+		</rollingPolicy>
+		<encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+			<pattern>%msg%n</pattern>
+		</encoder>
+	</appender>
+	
+	<appender name="EXP_LOG" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<FileNamePattern>${EXP_LOG_PATH}/expLog.%d{yyyy-MM-dd}.log
+			</FileNamePattern>
+			<MaxHistory>30</MaxHistory>
+		</rollingPolicy>
+		<encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+			<pattern>%msg%n</pattern>
+		</encoder>
+	</appender>
+	
+	<appender name="SQL_LOG" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<FileNamePattern>${SQL_LOG_PATH}/sqlLog.%d{yyyy-MM-dd}.log
+			</FileNamePattern>
+			<MaxHistory>30</MaxHistory>
+		</rollingPolicy>
+		<encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+			<pattern>%msg%n</pattern>
+		</encoder>
+	</appender>
+
+	<appender name="BACKEND_CMPT_LOG" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<FileNamePattern>${BACKEND_CMPT_LOG_PATH}/backendCmptLog.%d{yyyy-MM-dd}.log
+			</FileNamePattern>
+			<MaxHistory>30</MaxHistory>
+		</rollingPolicy>
+		<encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+			<pattern>%msg%n</pattern>
+		</encoder>
+	</appender>
+
+	<appender name="SECURITY_LOG" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<FileNamePattern>${SECURITY_LOG_PATH}/securityLog.%d{yyyy-MM-dd}.log
+			</FileNamePattern>
+			<MaxHistory>30</MaxHistory>
+		</rollingPolicy>
+		<encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+			<pattern>%msg%n</pattern>
+		</encoder>
+	</appender>
+	<appender name="AUDIT_LOG" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<FileNamePattern>${AUDIT_LOG_PATH}/auditLog.%d{yyyy-MM-dd}.log
+			</FileNamePattern>
+			<MaxHistory>30</MaxHistory>
+		</rollingPolicy>
+		<encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+			<pattern>%msg%n</pattern>
+		</encoder>
+	</appender>
+	<appender name="COMPONENT_LOG" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<FileNamePattern>${COMPONENT_LOG_PATH}/componentLog.%d{yyyy-MM-dd}.log
+			</FileNamePattern>
+			<MaxHistory>30</MaxHistory>
+		</rollingPolicy>
+		<encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+			<pattern>%msg%n</pattern>
+		</encoder>
+	</appender>
+	
+	
+	<logger name="apiReqInd" additivity="false" level="info">
+		<appender-ref ref="API_REQ_IND" />
+	</logger>
+	
+	<logger name="clientEnvInd" additivity="false" level="info">
+		<appender-ref ref="CLIENT_ENV_IND" />
+	</logger>
+	
+	<logger name="jsErrorInd" additivity="false" level="info">
+		<appender-ref ref="JS_ERROR_IND" />
+	</logger>
+
+	<logger name="pageAccessInd" additivity="false" level="info">
+		<appender-ref ref="PAGE_ACCESS_IND" />
+	</logger>
+	
+	<logger name="pageLoadInd" additivity="false" level="info">
+		<appender-ref ref="PAGE_LOAD_IND" />
+	</logger>
+	
+	<logger name="webCmptInd" additivity="false" level="info">
+		<appender-ref ref="WEB_CMPT_IND" />
+	</logger>
+	
+	<logger name="loginLog" additivity="false" level="info">
+		<appender-ref ref="LOGIN_LOG" />
+	</logger>
+	
+	<logger name="optLog" additivity="false" level="info">
+		<appender-ref ref="OPT_LOG" />
+	</logger>
+	
+	<logger name="expLog" additivity="false" level="info">
+		<appender-ref ref="EXP_LOG" />
+	</logger>
+	
+	<logger name="sqlLog" additivity="false" level="info">
+		<appender-ref ref="SQL_LOG" />
+	</logger>
+
+	<logger name="backendCmptLog" additivity="false" level="info">
+		<appender-ref ref="BACKEND_CMPT_LOG" />
+	</logger>
+
+	<logger name="securityLog" additivity="false" level="info">
+		<appender-ref ref="SECURITY_LOG" />
+	</logger>
+	
+	<logger name="auditLog" additivity="false" level="info">
+		<appender-ref ref="AUDIT_LOG" />
+	</logger>
+	
+	<logger name="componentLog" additivity="false" level="info">
+		<appender-ref ref="COMPONENT_LOG" />
+	</logger>
+	<!-- 监控日志配置 end -->
+
+	<!-- 审计运行日志 日志处理类-->
+	<appender name="actuatorWorkingLogAsyncAppender" class="com.cgnpc.cud.workflow2.base.log.base.LogbackMergeDBAppenderBase">
+		<mappingClass>com.cgnpc.cud.workflow2.base.domian.log.CudLogAuditWorkingEntity</mappingClass>
+	</appender>
+
+	<!-- 审计运行日志 日志分派器-->
+	<appender name="actuatorWorkingLogAsync" class="ch.qos.logback.classic.AsyncAppender">
+		<discardingThreshold>0</discardingThreshold>
+		<queueSize>10000</queueSize>
+		<appender-ref ref="actuatorWorkingLogAsyncAppender"/>
+	</appender>
+
+	<!-- 审计运行日志 日志logger-->
+	<logger name="actuatorWorkingLog" level="INFO" additivity="false">
+		<appender-ref ref="actuatorWorkingLogAsync"/>
+	</logger>
+
+	<!-- 流程审计运行日志 日志处理类-->
+	<appender name="actuatorWorkingLogWfAsyncAppender" class="com.cgnpc.cud.workflow2.base.log.base.LogbackMergeDBAppenderBase">
+		<mappingClass>com.cgnpc.cud.workflow2.base.domian.log.CudWfLogAuditWorkingEntity</mappingClass>
+	</appender>
+
+	<!-- 流程审计运行日志 日志分派器-->
+	<appender name="actuatorWorkingLogWfAsync" class="ch.qos.logback.classic.AsyncAppender">
+		<discardingThreshold>0</discardingThreshold>
+		<queueSize>10000</queueSize>
+		<appender-ref ref="actuatorWorkingLogWfAsyncAppender"/>
+	</appender>
+
+	<!-- 流程审计运行日志 日志logger-->
+	<logger name="actuatorWorkingLogWf" level="INFO" additivity="false">
+		<appender-ref ref="actuatorWorkingLogWfAsync"/>
+	</logger>
+
+	<!-- 流程审计运行日志-psc调用 日志处理类-->
+	<appender name="actuatorWfWorkingLogPscAsyncAppender" class="com.cgnpc.cud.workflow2.base.log.base.LogbackMergeDBAppenderBase">
+		<mappingClass>com.cgnpc.cud.workflow2.base.domian.log.CudWfLogAuditWorkingPscEntity</mappingClass>
+	</appender>
+
+	<!-- 流程审计运行日志-psc调用 日志分派器-->
+	<appender name="actuatorWfWorkingLogPscAsync" class="ch.qos.logback.classic.AsyncAppender">
+		<discardingThreshold>0</discardingThreshold>
+		<queueSize>10000</queueSize>
+		<appender-ref ref="actuatorWfWorkingLogPscAsyncAppender"/>
+	</appender>
+
+	<!-- 流程审计运行日志-psc调用 日志logger-->
+	<logger name="actuatorWfWorkingLogPsc" level="INFO" additivity="false">
+		<appender-ref ref="actuatorWfWorkingLogPscAsync"/>
+	</logger>
+
+	<!-- 流程审计运行日志-扩展及其他明细调用 日志处理类-->
+	<appender name="actuatorWfWorkingLogExtOrOthAsyncAppender" class="com.cgnpc.cud.workflow2.base.log.base.LogbackMergeDBAppenderBase">
+		<mappingClass>com.cgnpc.cud.workflow2.base.domian.log.CudWfLogAuditWorkingExtOrOthEntity</mappingClass>
+	</appender>
+
+	<!-- 流程审计运行日志-扩展及其他明细调用 日志分派器-->
+	<appender name="actuatorWfWorkingLogExtOrOthAsync" class="ch.qos.logback.classic.AsyncAppender">
+		<discardingThreshold>0</discardingThreshold>
+		<queueSize>10000</queueSize>
+		<appender-ref ref="actuatorWfWorkingLogExtOrOthAsyncAppender"/>
+	</appender>
+
+	<!-- 流程审计运行日志-扩展及其他明细调用 日志logger-->
+	<logger name="actuatorWfWorkingLogExtOrOth" level="INFO" additivity="false">
+		<appender-ref ref="actuatorWfWorkingLogExtOrOthAsync"/>
+	</logger>
+
+	<!-- 审计配置日志 日志处理类-->
+	<appender name="actuatorConfigLogAppender" class="com.cgnpc.cud.workflow2.base.log.base.LogbackMergeDBAppenderBase">
+		<mappingClass>com.cgnpc.cud.workflow2.base.domian.log.CudLogAuditConfigEntity</mappingClass>
+	</appender>
+
+	<!-- 审计配置日志 日志分派器-->
+	<appender name="actuatorConfigLogAsync" class="ch.qos.logback.classic.AsyncAppender">
+		<discardingThreshold>0</discardingThreshold>
+		<queueSize>10000</queueSize>
+		<appender-ref ref="actuatorConfigLogAppender"/>
+	</appender>
+
+	<!-- 审计配置日志 日志logger-->
+	<logger name="actuatorConfigLog" level="INFO" additivity="false">
+		<appender-ref ref="actuatorConfigLogAsync"/>
+	</logger>
+
+	<!-- 审计性能日志 日志处理类-->
+	<appender name="performanceLogAppender" class="com.cgnpc.cud.workflow2.base.log.base.LogbackMergeDBAppenderBase">
+		<mappingClass>com.cgnpc.cud.workflow2.base.domian.log.CudLogPerformanceEntity</mappingClass>
+	</appender>
+
+	<!-- 审计性能日志 日志分派器-->
+	<appender name="performanceLogAsync" class="ch.qos.logback.classic.AsyncAppender">
+		<discardingThreshold>0</discardingThreshold>
+		<queueSize>10000</queueSize>
+		<appender-ref ref="performanceLogAppender"/>
+	</appender>
+
+	<!-- 审计性能日志 日志logger-->
+	<logger name="performanceLog" level="INFO" additivity="false">
+		<appender-ref ref="performanceLogAsync"/>
+	</logger>
+
+
+
+</configuration> 

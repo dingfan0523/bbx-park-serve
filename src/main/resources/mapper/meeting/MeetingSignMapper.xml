@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.meeting.mapper.MeetingReserveSignRepository">
+    <select id="getEmployeeAttendance" resultType="com.cgnpc.bbxpark.ioc.dto.model.DailySignAnalysis">
+        SELECT
+        TRUNC(r.real_start_time) AS date,   -- 按日期分组，TRUNC将时间截断到日期部分
+        COUNT(s.id) AS total_sign_count,
+        SUM(CASE WHEN s.type = 1 THEN 1 ELSE 0 END) AS normal_sign_count,
+        ROUND(100.0 * SUM(CASE WHEN s.type = 1 THEN 1 ELSE 0 END) / NULLIF(COUNT(s.id), 0), 2) AS normalSignRate
+        FROM bbx_meeting_reserve r
+        INNER JOIN bbx_meeting_reserve_sign s ON r.id = s.reserve_id
+        WHERE r.in_valid_flag = 0 AND cancel_flag = 0
+        AND r.real_start_time >= TRUNC(SYSDATE) - 30   -- 30天前
+        <if test="tenantId != null">
+            AND r.tenant_id =#{tenantId}
+        </if>
+        GROUP BY date
+        ORDER BY date;
+    </select>
+</mapper>

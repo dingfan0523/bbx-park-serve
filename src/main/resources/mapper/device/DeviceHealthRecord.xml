@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.device.mapper.DeviceHealthRecordRepository">
+    <select id="findDeviceHealthRecord" resultType="com.cgnpc.bbxpark.ioc.dto.model.DeviceHealthTrendModel">
+        WITH RECURSIVE space_tree(id,space_name) AS (
+        SELECT id,space_name FROM BBX_PARK_SPACE
+        <where>
+            <if test="sslcCode != null and sslcCode != ''">
+                sslc_code = #{sslcCode}
+            </if>
+            <if test="tenantId != null">
+                AND tenant_id = #{tenantId}
+            </if>
+        </where>
+        UNION ALL
+        SELECT s.id,s.space_name FROM BBX_PARK_SPACE s
+        INNER JOIN space_tree st ON s.parent_space_id = st.id
+        )
+        SELECT
+        TO_CHAR(TRUNC(r.record_time), 'MM-dd') as date,
+        ROUND(AVG(r.online) * 100,2) as online_rate,
+        ROUND(AVG(r."alarm") * 100,2) as alarm_rate
+        FROM bbx_device_health_record r
+        INNER JOIN space_tree st1 ON r.space_id = st1.id
+        WHERE r.record_time >= SYSDATE - 30
+        <if test="tenantId != null">
+            AND r.tenant_id = #{tenantId}
+        </if>
+        GROUP BY r.record_time
+        ORDER BY date
+    </select>
+
+</mapper>

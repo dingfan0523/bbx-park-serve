@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.device.mapper.DeviceGroupRelRepository">
+
+
+    <select id="findGroupRel"
+            resultType="com.cgnpc.bbxpark.device.dto.model.DeviceGroupRelModel">
+        select
+        bdgr.device_id,
+        bdgr.group_id,
+        bdg.group_name
+        from bbx_device_group_rel bdgr
+        JOIN bbx_device_group bdg ON bdgr.group_id = bdg.id
+        <where>
+            <if test="condition.tenantId != null">
+                AND bdgr.tenant_id =#{condition.tenantId}
+            </if>
+            <if test="condition.deviceId != null">
+                AND bdgr.device_id =#{condition.deviceId}
+            </if>
+            <if test="condition.deviceIdList != null">
+                AND bdgr.device_id in
+                <foreach collection="condition.deviceIdList" item="deviceId" open="(" separator=", "
+                         close=")">
+                    #{deviceId}
+                </foreach>
+            </if>
+        </where>
+        order by bdgr.create_time
+    </select>
+
+    <select id="findDevices"
+            resultType="com.cgnpc.bbxpark.device.dto.model.DeviceGroupRelModel">
+        select
+        bdgr.device_id
+        from bbx_device_group_rel bdgr
+        JOIN bbx_device_group bdg ON bdgr.group_id = bdg.id
+        <where>
+            <if test="condition.tenantId != null">
+                AND bdgr.tenant_id =#{condition.tenantId}
+            </if>
+            <if test="condition.groupCode != null">
+                AND bdg.group_code like CONCAT('%',#{condition.groupCode},'%')
+            </if>
+        </where>
+    </select>
+
+</mapper>

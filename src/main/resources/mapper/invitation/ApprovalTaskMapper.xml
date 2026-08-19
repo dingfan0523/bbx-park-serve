@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.invitation.mapper.ApprovalTaskRepository">
+
+    <select id="pendingApprovalPage" resultType="java.lang.Long">
+        SELECT t.business_id
+        FROM bbx_approval_task t
+        INNER JOIN bbx_task_assignment ta ON t.id = ta.task_id AND ta.user_id = #{userId}
+        WHERE t.status = 10
+        <if test="tenantId != null">
+            AND t.tenant_id =#{tenantId}
+        </if>
+        AND t.deleted = 1
+        GROUP BY t.business_id
+        ORDER BY MAX(t.create_time)
+    </select>
+
+</mapper>

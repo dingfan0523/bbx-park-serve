@@ -1,0 +1,563 @@
+#app
+server:
+  port: 8080
+  tomcat:
+    max-threads: 1000
+    min-spare-threads: 30
+  servlet:
+    context-path: /
+
+spring:
+  elasticsearch:
+    rest:
+      uris: http://10.33.15.71:9200
+      username: elastic
+      password: Elastic_Mon#2021
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+  #应用名称
+  application:
+    # 与license 进行对应  临时license是cuddemo
+    name: BBX-CN
+  servlet:
+    multipart:
+      max-file-size: 100MB  #上传文件设置 单个文件大小100M
+      max-request-size: 100MB  #总上传的数据大小100M
+    #多语言配置目录
+  messages:
+    basename: i18n/messages,i18n/system
+  jackson:
+    time-zone: GMT+8
+    date-format: yyyy-MM-dd HH:mm:ss
+    #轻量级授权时，type为redis
+  cache:
+    #type: ehcache
+    type: redis
+    #解决springboot2的bean重复扫描报错
+  main:
+    allow-bean-definition-overriding: true
+    allow-circular-references: true
+
+  #关闭JMX监控
+  jmx:
+    enabled: false
+
+  #redis配置
+  redis:
+    database: 0
+    host: 10.33.15.71
+    #    host: 127.0.0.1
+    port: 16379
+    #    password:
+    password: sm4(6e2ab56be4c767e5c84b74a4056139212383fab4084a79bfb89ca98c0a6cfe25:726950c0c25ae71065c54e450b0823e4)
+    jedis:
+      pool:
+        max-active: 800
+        max-wait: 10000
+        max-idle: 20
+        min-idle: 2
+        timeout: 30000
+  thymeleaf:
+    #prefix: /WEB-INF/templates/
+    suffix: .html
+    mode: HTML5
+  #数据源配置
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    #url: jdbc:dm://xxxx:xxxx?schema=xxxx&clobAsString=true&columnNameCase=0&columnNameUpperCase=0&useUnicode=true&characterEncoding=UTF-8
+    url: jdbc:dm://DMDW?dmsvcconf=D:/dm_svc_test.conf
+    username: MATRIX
+    password: sm4(5c234cb0751d72b8aefd29dc5f051925:faa06612cec6f173866e51447ce0e634)
+    driverClassName: dm.jdbc.driver.DmDriver
+    druid:
+      initial-size: 10
+      max-active: 100
+      min-idle: 10
+      max-wait: 60000
+      pool-prepared-statements: true
+      max-pool-prepared-statement-per-connection-size: 20
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      validation-query: SELECT 1
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      filter:
+        stat:
+          log-slow-sql: true
+          slow-sql-millis: 1000
+          merge-sql: true
+        wall:
+          config:
+            multi-statement-allow: true
+        config:
+          enabled: true
+          #druid公钥  config.decrypt=false 表示不使用druid加密
+          key: MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAKms1ctmezXkUd7vQ5BhVkuFr0xQM032o323URadBOpKyWxPIDek/kcEEsryferiIqHOTSR2tNinmSIuwLNrVXkCAwEAAQ==
+      connection-properties: config.decrypt=false;config.decrypt.key=${spring.datasource.druid.filter.config.key}
+      stat-view-servlet:
+        enabled: false
+        url-pattern: /druid/*
+
+  quartz:
+    autoStartup: false
+    jdbc:
+      initializeSchema: never
+    #相关属性配置
+    properties:
+      org:
+        quartz:
+          scheduler:
+            instanceName: clusteredScheduler
+            instanceId: AUTO
+          jobStore:
+            class: org.springframework.scheduling.quartz.LocalDataSourceJobStore
+            driverDelegateClass: org.quartz.impl.jdbcjobstore.StdJDBCDelegate
+            tablePrefix: QRTZ_
+            isClustered: true
+            clusterCheckinInterval: 10000
+            useProperties: false
+
+          threadPool:
+            class: org.quartz.simpl.SimpleThreadPool
+            threadCount: 10
+            threadPriority: 5
+            threadsInheritContextClassLoaderOfInitializingThread: true
+    #数据库方式
+    job-store-type: jdbc
+
+#mybatis classpath*读取子包中的xml文件
+mybatis-plus:
+  mapper-locations: classpath*:mapper/*.xml,classpath*:/mapper/**/*.xml
+  #实体扫描，多个package用逗号或者分号分隔com.cgnpc.cud.auth.domain
+  typeAliasesPackage: com.cgnpc.bbxpark.*.*.domain,com.cgnpc.cud.*.domain,com.cgnpc.cud.framework.domain,com.cgnpc.cud.authr.core.systemManage.*.domain
+  type-enums-package: com.cgnpc.bbxpark.*.*.domain.enums
+  global-config:
+    db-config:
+      table-prefix: ims.
+      #主键类型  0:"数据库ID自增", 1:"用户输入ID",2:"全局唯一ID (数字类型唯一ID)", 3:"全局唯一ID UUID";
+      id-type: uuid
+      #字段策略 0:"忽略判断",1:"非 NULL 判断"),2:"非空判断"
+      field-strategy: 1
+      #逻辑删除
+  #      logic-delete-value: 0
+  #      logic-not-delete-value: 1
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+    database-id: mysql
+  form-meta-object:
+    type: bbx
+#框架配置
+cud:
+  #MS security token
+  cloud:
+    security:
+      token-secret: A#5b@C!9^d%X7 #加密密钥
+      token-timeout-min: 900  # 登录会话有效时长，单位：分钟
+  #跨域配置
+  allow-origins: http://localhost:8088
+  #custom自定义 system系统
+  business-log: system
+  custom-business-log: custom
+  datasource:
+    enable-multiple-source: false
+    names: druid
+    master-data-source-name: druid
+  #登陆模式  三种模式：aep 域帐号单点登陆 / auth2 4A登录 /pro 授权系统认证 /pro-sso 授权系统单点登录
+  login-mode: aep
+  #单点登录配置
+  sso:
+    #系统后端地址
+    #client: http://10.33.15.64:8080/cuddemo4-server
+    client: http://10.33.203.154:8080
+    #单点登录地址
+    server: http://aepsso.gnpjvc.cgnpc.com.cn/cas
+    #系统前端地址
+    vue: http://10.33.203.154:8010
+    #排除单点登录配置
+    exclude: /login/cas,/login/getUserDetail,/api/**,/api/login/**
+    #单点登录多前端配置
+    vue-list: { a: "http://10.33.203.154:8010",b: "http://localhost:8011",c: "http://localhost:8081",d: "http://10.33.203.154:8011",e: "http://10.33.203.154:8081" }
+  oauth2:
+    #4A申请应用ID
+    client-id: BBX-CN
+    #4A申请应用密钥
+    client-secret: 1eed5ebe09c24070980bcff2940fea8d
+    #应用前端首页
+    vue: http://10.33.203.154:8010
+    #应用后端地址
+    server-url: http://10.33.203.154:8080
+    #中台4A获取token地址
+    access-token-url: https://aepgw-t.gnpjvc.cgnpc.com.cn/authcenter/getOauth2Token
+    #中台4A获取用户信息地址
+    user-info-url: https://aepgw-t.gnpjvc.cgnpc.com.cn/authcenter/getOauth2UserInfo
+    #中台4A退出地址
+    logout-url: https://aepgw-t.gnpjvc.cgnpc.com.cn/authcenter/userLogout
+    #4A授权码获取地址
+    authorize-url: https://uap-t.cgnpc.com.cn/authcenter/getOauth2Authorize
+    #排除4A登录配置,默认可以删除
+    exclude: /ws/**,/api/**,/api/login/**
+  #授权系统单点登录
+  pro-sso:
+    #单点登录服务端地址
+    server-url: http://localhost:8088
+    #系统后端地址
+    client: http://localhost:8080
+    #系统前端首页
+    vue: http://localhost:8010
+    #当前注册在授权系统的应用系统appid
+    appId: xxxx
+    #客户端id
+    client-id: xxxx
+    #客户端密钥
+    client-secret: xxxx
+    #忽略拦截urls（排出静态资源和登录、退出、OAuth2认证等请求）
+    exclude-urls: /login/**,/api/**,/api/login/**
+  #dict数据字典配置
+  dict:
+    uri:
+      queryBySuperId: /dict/queryDictClassifyBySupDictId
+      queryDictItem: /dict/queryDictItem
+  #PSC2.0相关配置
+  psc2:
+    # 后台服务地址
+    servicePath: http://localhost:8080
+    #应用编码
+    appcode: CUD
+    #租户ID
+    tenantId: tenCode
+    #应用编码, 命名规则为appCode_tenantId_queue
+    rollbackQueue: CUD_tenCode_queue
+    #psc请求地址
+    ascUrl: http://psc2-t/psc-oauth
+    #psc请求地址
+    pscUrl: http://psc2-t/psc-process
+    #psc请求地址
+    uauUrl: http://psc2-t/psc-system
+    #授权Key
+    appKey: xxxx
+    #授权密钥
+    appSecret: xxxx
+    #授权类型
+    grant_type: client_credentials
+    #防篡改拦截
+    tamperingInclude: /assembly/prepareSubmit
+    #流程数据模型类路径
+    dataModelClassPath: com.cgnpc.extend.datamodel.model.
+  #UBA配置
+  uba:
+    #配置项中有此值，则开启UBA，否则不开启
+    url: http://ubaservice-t.gnpjvc.cgnpc.com.cn
+    #在 uba上注册的系统编码，如果不配置则以spring.application.name为准
+    syscode: cuddemo4
+  #集团统一授权配置  记得申请统一授权微服务
+  uau:
+    # url是调用微服务的地址  -t 表示测试环境  -p表示预生产环境   http://aepgw 为正式环境
+    url: http://aepgw-t.gnpjvc.cgnpc.com.cn/uauauth
+    # name 表示 你在uau系统上注册的系统编码 cuddemo3
+    name: BBX-CN
+  #代码生成器
+  generator:
+    author: pxmwlin
+    #MVC 或者VUE
+    mode: VUE
+    #oracle专用
+    schemaName: IMS
+    #模块名称
+    moduleName: module
+    packageName: com.cgnpc.bbxpark
+  lic:
+    #license文件地址
+    license: license.lic
+  security:
+    #安全相关过滤器
+    filters:
+      csrf:
+        allowHeaders: authorization,Authorization,DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,token
+        allowOrigins: http://localhost:8080,http://localhost:8081,http://localhost:8010
+      file:
+        excludes: /login,/logout
+        #允许上传的文件扩展名
+        extensions: png,jpg,jpeg,doc,docx,xls,xlsx,pdf,mp4,avi,wmv,mpeg,mov,asf,flv,rmvb,vob,zip,rar
+        #文件扩展名黑名单
+        blockExtensions: sh,js,cmd,bat,exe,vbs
+        #上传文件最大限制单位M
+        maxSize: 500
+      xss:
+        excludes: /login,/getUserList,/test/testFilter,/assembly/procValidateUpdate,/form/addForm,/form/updateFormNotUpVer,/form/updateFormUpVer,/assembly/prepareSubmit,/businessForm/save,/flowDesigner/updateProcModel,/flowDesigner/updateProcModelConfig,/wf/WfConfigManage/publishWFConfigActNode,/ruleEngine/execRuleExpr,/ruleEngine/wfRuleExprInspect,/cudWfRuleMaster/updateOne,/ruleEngine/wfRuleTreeInspect,/cudWfRuleMaster/addOne,/client/request/detail/format/xmlToJsonBySoap,/client/connection/v4/untitled/request,/client/connection/v4/Connector/getVerificationParameters,/client/request/detail/insert/RequestDetail,/ruleEngine/formRuleRecombination,/form/getFormById,/emailTemplate/update,/emailTemplate/add,/wf/WfConfigManage/saveDraftWFConfigActNode,/formHis/updateFormHisNotUpVer,/cudWfRuleMaster/switchStatus
+      xxe:
+        attributes: SYSTEM
+        excludes: /login,/logout
+      #审计日志过滤拦截，以英文逗号分隔
+      audit:
+        excludes: /monitor/ind/collect
+    interceptors:
+      #sql注入拦截器
+      sqlInjection:
+        #sql注入需要过滤的属性
+        attributes: declare,alter,create,drop,1=1,database,1='1
+        #是否大小写敏感
+        caseSensitive: true
+        #不需要注入拦截的方法：mapper + method
+        excludes: com.cgnpc.cud.gen.dao.mapper.CudFormTmplTMapper.insert,com.cgnpc.cud.gen.dao.mapper.CudFormTmplTMapper.update
+    #部署模式：war or jar
+    deployMode: war
+    #此处需要项目自行修改appid，与spring.application.name一致
+    #license: appid=cuddemo&cudVersionNo=2.0
+    #配置服务地址
+    #serviceUri: /cudconfig/queryCudConfig
+    #安全配置版本号
+    versionNo: 1
+
+  #配置钉钉消息通知接入
+  dtalk:
+    #使用接口异常钉钉消息通知 开启=true 关闭=false
+    enable: false
+    #替换为企业的corpId
+    corpId: xxxx
+    #替换为自己应用的appKey
+    appKey: xxxx
+    #替换为自己应用的appSecret
+    appSecret: xxxx
+    #替换为自己应用的agentId
+    agentId: 1375738082
+    #多个逗号分隔
+    useridList: PXMWHEY,P633860,P629988,P634064
+    #配置url
+    dingTalkUrl: http://mobileapptest.gnpjvc.cgnpc.com.cn:8020
+    include:
+    exclude:
+    tokenKey: accessToken
+    tokenSecret: AAQWEFSEFSDFSE2F
+    active: dev
+    messageUrl: dingtalk://dingtalkclient/action/openapp?corpid=dingc9d2820241461f3df2c783f7214b6d69&container_type=work_platform&app_id=dingiweda3mermgs7flr&redirect_type=jump&redirect_url=https://newmobileapptest.cgnpc.com.cn/app/cud4demo/#/login?redirect=todo
+    #超时提醒发送邮件和钉钉消息开关，开启时请设置为true
+    notify:
+      email: true
+      dingTalk: true
+
+  #数据来源：aep-中台 /pro-授权系统 /pro-sso 授权单点登录系统 /other-为自定义实现
+  data-source:
+    #用户数据
+    user: aep
+    #部门数据
+    dept: aep
+    #邮件
+    email: aep
+    #文件
+    file: local
+    #短信
+    sms: aep
+    #权限菜单
+    permission: aep
+  #TODO 排除权限拦截路径 本地环境默认不进行权限拦截 发布其它环境请注释 /**/** 配置
+  authExcludeUrl: /*/login/**,/user/**,/uau/perm/**,/sys/**,/procAttachment/error,/api/**,/printPdf/**,/rpt/getToken,/**/**
+  #授权系统相关配置 登录模式为pro时需配置
+  pro-auth:
+    #授权系统访问地址
+    url: https://cudproauth-t.gnpjvc.cgnpc.com.cn/cuddemo-server
+    #授权系统访问签名字符
+    sign: xxxx
+    #授权系统密钥
+    secret: xxxx
+    #当前注册在授权系统的应用系统appid
+    appId: xxxx
+    #授权系统令牌拦截排除路径——登录排除路径
+    exclude: /login/**
+  ereport:
+    servicePath: https://ereport-t.gnpjvc.cgnpc.com.cn
+    syscode: xxxx
+    clientSecret: xxxx
+#    syscode: cuddemo3
+#    clientSecret: 889fc0843c1072523eb9f9e6398feba5c5a4b398
+    ascUrl: https://ereport-t.gnpjvc.cgnpc.com.cn/serverapi
+    tokenServiceUrl: https://ereport-t.gnpjvc.cgnpc.com.cn/serverapi/rpt/getReportAuthToken
+  #数据隔离sql拦截配置
+  dataPermission:
+    #数据隔离功能开关
+    enable: false
+    #管理员角色编码与uau角色code对应
+    adminRoleCode: admin_user_role
+  #接口日志配置
+  interface-log:
+    #是否开启接口日志
+    enable: false
+    #接口响应数据配置
+    response-data:
+      #以下路径返回响应数据
+      includeUri:
+        - /**
+  #流程配置
+  proc:
+    #批量流程配置
+    multi:
+      #批量发起最大数量
+      start-max-size: 30
+      #批量提交最大数量
+      submit-max-size: 30
+      #批量回退最大数量
+      back-max-size: 30
+#      #是否限流
+#      rate-limit: false
+#      #批量发起限流大小
+#      start-max-rate: 100
+#      #批量提交限流大小
+#      submit-max-rate: 100
+#      #请求限流后重试次数
+#      retry-count: 3
+#      #最大等待时间,单位毫秒
+#      timeout: 1000
+
+
+aep:
+  # 应用中心配置
+  appcenter:
+    # 租户配置
+    tenantId: 1
+    tenantCode: CGNP
+    tenantName: 中国广核电力股份有限公司
+
+    # 应用配置
+    appId: BBX-CN
+    appCode: 1983849517060984833
+    appName: 三澳核电生产行政办公楼(BBX)行政指挥中心智能化建设
+    appKey: 9b2ab63c4a6c4161beb6176c06263816
+    appSecret: 1eed5ebe09c24070980bcff2940fea8d
+    #调用微服务环境配置,test表示调用测试环境的微服务,stage表示预生产/灰度环境,online表示生产环境,
+    active: test
+
+#sm4 属性，配置文件敏感信息加密，可以在target 里面看到效果
+sm4:
+  #加密的属性 可以用,逗号对多个进行加密
+  props: spring.datasource.password,spring.rabbitmq.password,spring.redis.password
+#配置接口管理中应用编码可通过idp服务获取（true）或者手动录入（false），不配置默认为true
+interfaceManager:
+  registApp:
+    appcode:
+      getidp:
+        enable: false
+
+local:
+  oss:
+    accessKey: xxxx
+    secretKey: xxxx
+    endPoint: http://10.100.206.78:8080
+    bucket: cud-test
+
+bbx:
+  role:
+    #系统管理员角色
+    system: default_admin_auth
+    #综合管理角色
+    generalRole: general_Role
+
+matrix:
+  operate-log:
+    # 配置每个路径对应的模块名称
+    module-name-config:
+      - module-path-pattern: /v1/tenant/**
+        module-name: 园区管理
+        children-action-type:
+          # child-path pattern必须是module-path-pattern的子模式，否则不会生效。优先级最高。
+          - child-path: /v1/tenant/page
+            action-type: 园区分页列表
+            method: POST
+          - child-path: /v1/tenant/pageFullInfo
+            action-type: 园区分页列表
+            method: POST
+      - module-path-pattern: /v1/park/space/**
+        module-name: 空间管理
+        # 配置子动作
+        children-action-type:
+          # child-path pattern必须是module-path-pattern的子模式，否则不会生效。优先级最高。
+          - child-path: /v1/park/space/tree
+            action-type: 空间树查询
+            method: GET
+    # 配置不同路径模式对应的actionType（动作）值
+    action-type-config:
+      - controller-method-name: add
+        method: POST
+        action-type: 新增
+      - controller-method-name: addBatch
+        method: POST
+        action-type: 批量新增
+      - controller-method-name: remove
+        method: DELETE
+        action-type: 删除
+      - controller-method-name: removeBatch
+        method: DELETE
+        action-type: 批量删除
+      - controller-method-name: edit
+        method: PUT
+        action-type: 修改
+      - controller-method-name: editBatch
+        method: PUT
+        action-type: 批量修改
+      - controller-method-name: disable
+        method: PUT
+        action-type: 禁用
+      - controller-method-name: disableBatch
+        method: PUT
+        action-type: 批量禁用
+      - controller-method-name: enable
+        method: PUT
+        action-type: 启用
+      - controller-method-name: enableBatch
+        method: PUT
+        action-type: 批量启用
+      - controller-method-name: page
+        method: POST
+        action-type: 分页查询
+      - controller-method-name: list
+        method: POST
+        action-type: 列表查询
+      - controller-method-name: detail
+        method: GET
+        action-type: 查询详情
+      - controller-method-name: findTree
+        method: POST
+        action-type: 查询树
+      - controller-method-name: findTreeList
+        method: POST
+        action-type: 查询树集合
+#kafka配置
+ioc:
+  kafka:
+    servers: 10.33.15.71:9092
+    group: 15
+    offset: latest
+    flag: Y
+    noticeLevel: 1,2,3,4
+    operation_log_topic: iot_to_ioc_device_operation_log
+    cancelAlterDeviceTopic: iot_to_ioc_cancel_alter_device_topic
+    deviceAlertTopics: iot_to_ioc_device_alert
+    customer:
+      enabled: true
+iot:
+  openapi:
+    ip: http://10.33.15.64:8081
+    infoListUrl: /thirdPartyApi/apiThirdListByGroupId
+    serviceUrl: /thirdPartyApi/invokeThingService
+  device:
+    ip: http://10.33.15.64:8085
+    stateUrl: /thirdPartyApi/apiThirdList/ids
+    login:
+      url: /auth/login
+      userName: fengys5
+      password: 123456
+      tenantId: 000000
+xxl:
+  job:
+    admin.addresses: http://10.33.15.71:5555/xxl-job-admin
+    accessToken: default_token
+    executor:
+      appname: bbx-service-business-dev
+      port: 0
+      logpath: /data/applogs/xxl-job/jobhandler
+      logretentiondays: 30
+hrcenter:
+  department:
+    root: 00888888
+    cangnan: 50259024

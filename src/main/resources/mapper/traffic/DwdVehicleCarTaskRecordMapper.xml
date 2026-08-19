@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.traffic.mapper.DwdVehicleCarTaskRecordRepository">
+    <select id="getDriverWorkload" resultType="com.cgnpc.bbxpark.ioc.dto.model.TrafficDriverWorkloadModel">
+        SELECT
+        driver_name AS driverName,
+        ROUND(COALESCE(SUM(single_mileage), 0),2) AS totalMileage
+        FROM dwd_vehicle_car_task_record
+        WHERE driver_name IS NOT NULL
+        AND single_mileage IS NOT NULL
+        AND depart_time >= #{minDay}
+        AND depart_time &lt;= #{maxDay}
+        GROUP BY driverName
+        ORDER BY totalMileage DESC
+        FETCH FIRST 10 ROWS ONLY
+    </select>
+
+    <select id="getDispatchOverview" resultType="com.cgnpc.bbxpark.ioc.dto.model.DispatchOverviewModel">
+        SELECT
+        ROUND(
+        CASE
+        WHEN COUNT(DISTINCT car_plate) = 0 THEN 0
+        ELSE COUNT(*) * 1.0 / COUNT(DISTINCT car_plate)
+        END, 2
+        ) AS avgDepartCount,
+        ROUND(
+        CASE
+        WHEN COUNT(DISTINCT driver_name) = 0 THEN 0
+        ELSE COALESCE(SUM(single_mileage), 0) / COUNT(DISTINCT driver_name)
+        END, 2
+        ) AS perCapitaMileageKm
+        FROM dwd_vehicle_car_task_record
+        WHERE driver_name IS NOT NULL
+        AND car_plate IS NOT NULL
+        AND single_mileage IS NOT NULL
+        AND depart_time >= #{minDay}
+        AND depart_time &lt;= #{maxDay}
+    </select>
+
+    <select id="getDispatchCountTrend" resultType="com.cgnpc.bbxpark.ioc.dto.model.DispatchCountTrendModel">
+        SELECT
+        TO_CHAR(depart_time, #{timeType}) AS date,
+        COUNT(*) AS count
+        FROM "MATRIX"."dwd_vehicle_car_task_record"
+        WHERE  depart_time >= #{minDay}
+        AND depart_time &lt;= #{maxDay}
+        GROUP BY TO_CHAR(depart_time, #{timeType})
+    </select>
+
+    <select id="getDispatchMileageTrend" resultType="com.cgnpc.bbxpark.ioc.dto.model.DispatchMileageTrendModel">
+        SELECT
+        TO_CHAR(depart_time, #{timeType}) AS date,
+        ROUND(COALESCE(SUM(single_mileage), 0),2) AS totalMileage
+        FROM "MATRIX"."dwd_vehicle_car_task_record"
+        WHERE single_mileage IS NOT NULL
+        AND depart_time >= #{minDay}
+        AND depart_time &lt;= #{maxDay}
+        GROUP BY TO_CHAR(depart_time, #{timeType})
+    </select>
+</mapper>

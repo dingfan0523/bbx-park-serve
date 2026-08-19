@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cgnpc.bbxpark.space.mapper.TenantInfoRepository">
+
+    <select id="pageFullInfo" resultType="com.cgnpc.bbxpark.space.domain.TenantInfo">
+        SELECT
+        DISTINCT
+        ti.id, ti.code, ti.contact_address, ti.contact_mobile, ti.contact_name, ti.create_time, ti.creator_id,
+        ti.description, ti.intro, ti.name, ti.status, ti.tenant_type, ti.update_time, ti.updator_id
+        FROM uic_tenant_info ti
+        left join uic_tenant_member tm ON (ti.id = tm.tenant_id
+<!--        and tm.`identity` = '1'-->
+        )
+        <where>
+            <if test="condition.loginStaffNo != null">
+                and tm.user_id = #{condition.loginStaffNo}
+            </if>
+            <if test="condition.tenantId != null">
+                AND ti.id = #{condition.tenantId}
+            </if>
+            <if test="condition.name != null and condition.name !=''">
+                AND ti.name like concat('%',#{condition.name}, '%')
+            </if>
+            <if test="condition.tenantType != null">
+                AND ti.tenant_type = #{condition.tenantType}
+            </if>
+        </where>
+        ORDER BY id
+<!--        <if test="orderColumn == null and orderTurn == null">-->
+<!--            ORDER BY id-->
+<!--        </if>-->
+<!--        <if test="orderColumn != null and orderTurn != null">-->
+<!--            ORDER BY ${orderColumn} ${orderTurn}-->
+<!--        </if>-->
+    </select>
+</mapper>

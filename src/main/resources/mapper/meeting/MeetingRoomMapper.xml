@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.meeting.mapper.MeetingRoomRepository">
+    <select id="pageService" resultType="com.cgnpc.bbxpark.meeting.dto.model.MeetingRoomServiceModel">
+        SELECT DISTINCT
+        rs.id,
+        rs.room_id,
+        rs.service_id,
+        rs.provide_count as `count`,
+        s.name,
+        s.standard,
+        s.warn,
+        s.instructions,
+        s.deleted as valid_flag,
+        rs.create_time
+        FROM bbx_meeting_room_service rs
+        LEFT JOIN bbx_meeting_service s ON rs.service_id = s.id
+        <where>
+            <if test="tenantId != null">
+                AND rs.tenant_id =#{tenantId} AND s.tenant_id =#{tenantId}
+            </if>
+            <if test="condition.roomId != null ">
+                AND rs.room_id = #{condition.roomId}
+            </if>
+            <if test="condition.name != null and condition.name != ''">
+                AND s.name like concat('%',#{condition.name},'%')
+            </if>
+        </where>
+        ORDER BY rs.create_time DESC
+    </select>
+
+    <select id="pageDevice" resultType="com.cgnpc.bbxpark.meeting.dto.model.MeetingRoomDeviceModel">
+        SELECT DISTINCT
+        rd.id,
+        d.id device_id,
+        d.device_name as deviceName,
+        rd.create_time
+        FROM bbx_meeting_room_device_rel rd
+        LEFT JOIN bbx_ioc_device d ON rd.device_id = d.id
+        <where>
+            <if test="tenantId != null">
+                AND rd.tenant_id =#{tenantId} AND d.tenant_id =#{tenantId}
+            </if>
+            <if test="condition.roomId != null ">
+                AND rd.room_id = #{condition.roomId}
+            </if>
+            <if test="condition.name != null and condition.name != ''">
+                AND d.device_name like concat('%',#{condition.name},'%')
+            </if>
+        </where>
+        ORDER BY rd.create_time DESC
+    </select>
+
+    <select id="listDevice" resultType="com.cgnpc.bbxpark.meeting.dto.model.MeetingRoomDeviceModel">
+        SELECT DISTINCT
+        rd.id,
+        d.id device_id,
+        d.device_name as deviceName,
+        d.iot_product_code product_key,
+        d.iot_device_dn iot_device_dn,
+        rd.create_time
+        FROM bbx_meeting_room_device_rel rd
+        LEFT JOIN bbx_ioc_device d ON rd.device_id = d.id
+        <where>
+            <if test="tenantId != null">
+                AND rd.tenant_id =#{tenantId} AND d.tenant_id =#{tenantId}
+            </if>
+            <if test="condition.roomId != null ">
+                AND rd.room_id = #{condition.roomId}
+            </if>
+        and d.iot_product_code is not null
+        </where>
+        ORDER BY rd.create_time DESC,rd.id
+    </select>
+</mapper>

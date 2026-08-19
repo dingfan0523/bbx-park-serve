@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.settings.mapper.SecurityDeviceRelationRepository">
+    <select id="queryAllDeviceIdByLoginUser" resultType="java.lang.Long">
+        SELECT sdr.device_id
+        FROM bbx_security_device_relation sdr
+                 JOIN bbx_security_manage sm ON sdr.security_manage_id = sm.id
+        WHERE sm.security_staffid = #{securityStaffid}
+        AND sm.tenant_id = #{tenantId}
+    </select>
+
+    <select id="findAllBySpaceIds" resultType="com.cgnpc.bbxpark.settings.dto.model.SecurityDeviceRelationModel">
+        SELECT sdr.*, de.DEVICE_NAME, de.SPACE_ID, sm.security_uname, sm.security_staffid, sm.security_uid
+        FROM bbx_security_device_relation sdr
+        left JOIN bbx_security_manage sm ON sdr.security_manage_id = sm.id
+        left JOIN bbx_ioc_device de ON sdr.device_id = de.id
+        WHERE de.SPACE_ID in
+            <foreach collection="spaceIds" item="spaceId" open="(" separator=", "
+                     close=")">
+                #{spaceId}
+            </foreach>
+    </select>
+
+
+</mapper>

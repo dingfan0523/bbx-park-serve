@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.device.mapper.AlarmInfoRepository">
+
+    <!-- 通过设备ID查询相关的未结束告警信息 -->
+    <select id="selectUnfinishedAlarmsByDeviceIds" resultType="com.cgnpc.bbxpark.device.domain.AlarmInfo">
+        SELECT ai.*
+        FROM bbx_alarm_info ai
+        JOIN bbx_alarm_device ad ON ai.id = ad.alarm_id
+        WHERE ad.device_id IN
+        <foreach collection="deviceIds" item="deviceId" separator="," open="(" close=")">
+            #{deviceId}
+        </foreach>
+        AND ai.alarm_status != 3
+    </select>
+
+    <select id="countAlarmInfo" resultType="com.cgnpc.bbxpark.device.dto.model.AlarmInfoCountModel">
+        SELECT COUNT(*) AS totalNum,
+               COALESCE(SUM(CASE WHEN alarm_status = 3 THEN 1 ELSE 0 END),0) AS finishNum,
+               (
+               SELECT alarm_name
+               FROM bbx_alarm_info
+               where id in
+                   (SELECT DISTINCT alarm_id from bbx_alarm_device
+                     <where>
+                         <if test="condition.deviceId != null">
+                             device_id =#{condition.deviceId}
+                         </if>
+                         <if test="condition.tenantId != null and condition.tenantId != ''">
+                             and tenant_id =#{condition.tenantId}
+                         </if>
+                     </where>)
+                 GROUP BY alarm_name ORDER BY COUNT(*) DESC LIMIT 1) AS alarmName,
+               (
+               SELECT COUNT(*)
+               FROM bbx_alarm_info
+               where id in
+                (SELECT DISTINCT alarm_id from bbx_alarm_device
+                <where>
+                    <if test="condition.deviceId != null">
+                        device_id =#{condition.deviceId}
+                    </if>
+                    <if test="condition.tenantId != null and condition.tenantId != ''">
+                        and tenant_id =#{condition.tenantId}
+                    </if>
+                </where>)
+                GROUP BY alarm_name ORDER BY COUNT(*) DESC LIMIT 1) AS alarmNameNum
+        FROM bbx_alarm_info
+        where id in
+        (SELECT DISTINCT alarm_id from bbx_alarm_device
+        <where>
+            <if test="condition.deviceId != null">
+                device_id =#{condition.deviceId}
+            </if>
+            <if test="condition.tenantId != null and condition.tenantId != ''">
+                and tenant_id =#{condition.tenantId}
+            </if>
+        </where>)
+    </select>
+
+
+    <select id="getMeetingRoomHealth" resultType="com.cgnpc.bbxpark.ioc.dto.model.WeekRoomHealth">
+        <![CDATA[
+        WITH week_dates AS (
+        SELECT TRUNC(SYSDATE, 'IW') - 1 + (LEVEL - 1) AS day_date
+        FROM DUAL
+        CONNECT BY LEVEL <= 7
+        )
+        ]]>
+        SELECT
+        w.day_date AS date,
+        COALESCE(COUNT(a.id), 0) AS count
+        FROM week_dates w
+        LEFT JOIN bbx_alarm_device a
+        ON TRUNC(a.create_time) = w.day_date
+        <if test="deviceIds != null and deviceIds.size() > 0">
+            AND a.device_id IN
+            <foreach collection="deviceIds " item="deviceId" open="(" separator=", " close=")">
+                #{deviceId}
+            </foreach>
+        </if>
+        <if test="tenantId != null">
+            AND a.tenant_id =#{tenantId}
+        </if>
+        GROUP BY w.day_date
+        ORDER BY w.day_date;
+
+    </select>
+
+    <select id="getAlarmTypeDistribution" resultType="com.cgnpc.bbxpark.ioc.dto.model.AlarmTypeDistributionModel">
+        WITH group_devices AS (
+        SELECT dgr.device_id
+        FROM bbx_device_group_rel dgr
+        JOIN bbx_device_group dg ON dgr.group_id = dg.id
+        WHERE dg.group_code LIKE CONCAT('%',#{groupCode},'%')
+        AND dg.deleted = 1
+        AND dg.tenant_id = #{tenantId}
+        AND dgr.tenant_id = #{tenantId}
+        ),
+        alarm_data AS (
+        SELECT ai.alarm_name, COUNT(*) AS cnt
+        FROM bbx_alarm_info ai
+        JOIN bbx_alarm_device ad ON ai.id = ad.alarm_id
+        WHERE ad.device_id IN (SELECT device_id FROM group_devices)
+        AND ai.deleted = 1
+        AND ad.tenant_id = #{tenantId}
+        AND ai.tenant_id = #{tenantId}
+        GROUP BY ai.alarm_name
+        )
+        SELECT
+        alarm_name AS name,
+        cnt AS count,
+        ROUND(cnt * 100.0 / SUM(cnt) OVER (), 2) AS ratio
+        FROM alarm_data
+        ORDER BY cnt DESC;
+    </select>
+
+    <select id="getAlarmLevelDistribution" resultType="com.cgnpc.bbxpark.ioc.dto.model.AlarmLevelDistributionModel">
+        WITH group_devices AS (
+        SELECT dgr.device_id
+        FROM bbx_device_group_rel dgr
+        JOIN bbx_device_group dg ON dgr.group_id = dg.id
+        WHERE dg.group_code LIKE CONCAT('%',#{groupCode},'%')
+        AND dg.deleted = 1
+        AND dg.tenant_id = #{tenantId}
+        AND dgr.tenant_id = #{tenantId}
+        ),
+        alarm_data AS (
+        SELECT ai.alarm_level, COUNT(*) AS cnt
+        FROM bbx_alarm_info ai
+        JOIN bbx_alarm_device ad ON ai.id = ad.alarm_id
+        WHERE ad.device_id IN (SELECT device_id FROM group_devices)
+        AND ai.deleted = 1
+        AND ad.tenant_id = #{tenantId}
+        AND ai.tenant_id = #{tenantId}
+        GROUP BY ai.alarm_level
+        )
+        SELECT
+        alarm_level AS level,
+        cnt AS count,
+        ROUND(cnt * 100.0 / SUM(cnt) OVER (), 2) AS ratio
+        FROM alarm_data
+        ORDER BY cnt DESC;
+    </select>
+</mapper>

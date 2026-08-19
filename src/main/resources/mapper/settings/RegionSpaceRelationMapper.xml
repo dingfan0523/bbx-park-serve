@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.settings.mapper.RegionSpaceRelationRepository">
+    <select id="queryAllSpaceIdByLoginUser" resultType="java.lang.Long">
+        SELECT rsr.space_id
+        FROM bbx_region_space_relation rsr
+                 JOIN bbx_region_manage rm ON rsr.region_id = rm.id
+        WHERE rm.region_staffid = #{regionStaffid}
+        AND rm.tenant_id = #{tenantId}
+    </select>
+
+
+</mapper>

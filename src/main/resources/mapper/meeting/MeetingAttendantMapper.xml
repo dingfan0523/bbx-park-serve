@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.meeting.mapper.MeetingAttendantRepository">
+    <select id="page" resultType="com.cgnpc.bbxpark.meeting.dto.model.MeetingAttendantModel">
+        SELECT
+            u.id,u.id as userId,u.user_name,u.staffid,ur.create_time
+        FROM uic_user_info u
+        INNER JOIN aas_user_role ur on u.id = ur.user_id
+        INNER JOIN aas_role_info r on ur.role_id = r.id
+        INNER JOIN sys_config_info c on r.`name` = c.`value`
+        <where>
+            <if test="code != null">
+                AND c.code =#{code}
+            </if>
+            <if test="tenantId != null">
+                AND r.tenant_id =#{tenantId}
+            </if>
+            <if test="condition.userName != null">
+                AND u.user_name like concat('%',#{condition.userName},'%')
+            </if>
+        </where>
+        order by ur.create_time DESC,u.id DESC
+    </select>
+
+
+</mapper>

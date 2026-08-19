@@ -1,0 +1,260 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.device.mapper.IocDeviceRepository">
+    <select id="listBySpace" resultType="com.cgnpc.bbxpark.device.domain.IocDevice">
+        WITH RECURSIVE space_tree(id,space_name) AS (
+        SELECT id,space_name FROM BBX_PARK_SPACE
+        <where>
+            <if test="sslcCode != null and sslcCode != ''">
+                sslc_code = #{sslcCode}
+            </if>
+            <if test="spaceId != null">
+                AND id = #{spaceId}
+            </if>
+            <if test="tenantId != null">
+                AND tenant_id = #{tenantId}
+            </if>
+        </where>
+        UNION ALL
+        SELECT s.id,s.space_name FROM BBX_PARK_SPACE s
+        INNER JOIN space_tree st ON s.parent_space_id = st.id
+        )
+        SELECT DISTINCT b.* FROM BBX_IOC_DEVICE b INNER JOIN space_tree st ON b.SPACE_ID = st.id
+        WHERE b.enable_status = 1 AND b.deleted = 1
+        <if test="tenantId != null">
+            AND b.tenant_id = #{tenantId}
+        </if>
+    </select>
+
+    <select id="findByGroup" resultType="com.cgnpc.bbxpark.device.domain.IocDevice">
+        SELECT d.id,d.iot_device_status FROM bbx_ioc_device d
+        INNER JOIN bbx_device_group_rel dgr ON d.id = dgr.device_id
+        INNER JOIN bbx_device_group dg ON dgr.group_id = dg.id
+            AND dg.group_code like CONCAT('%',#{groupCode},'%') AND dg.tenant_id = #{tenantId} AND dg.deleted = 1
+        WHERE d.enable_status = 1 AND d.tenant_id = #{tenantId} AND d.deleted = 1
+    </select>
+
+    <select id="pageByScreen" resultType="com.cgnpc.bbxpark.ioc.dto.model.DeviceModel">
+        SELECT DISTINCT b.id,b.device_name,dg.id groupId,dg.group_code groupCode,dg.group_name groupName,eb.branch_name branchName
+        FROM BBX_IOC_DEVICE b
+        LEFT JOIN BBX_DEVICE_GROUP_REL dgr ON b.id = dgr.device_id AND dgr.tenant_id=#{tenantId}
+        LEFT JOIN BBX_DEVICE_GROUP dg ON dgr.group_id = dg.id AND dg.deleted = 1 AND dg.tenant_id=#{tenantId}
+        LEFT JOIN BBX_BRANCH_DEVICE bd ON b.id = bd.device_id AND bd.tenant_id=#{tenantId}
+        LEFT JOIN BBX_ENERGY_BRANCH eb ON bd.branch_id = eb.id AND eb.deleted = 1 AND eb.tenant_id=#{tenantId}
+        WHERE b.enable_status = 1 AND b.deleted = 1 AND b.tenant_id = #{tenantId}
+        <if test="condition.platforms != null">
+            AND b.iot_device_platform IN
+            <foreach collection="condition.platforms" item="platform" open="(" separator="," close=")">
+                #{platform}
+            </foreach>
+        </if>
+        <if test="condition.spaceId != null">
+            AND b.space_id = #{condition.spaceId}
+        </if>
+        <if test="condition.readingType != null">
+            AND b.reading_type = #{condition.readingType}
+        </if>
+        <if test="condition.groupId != null">
+            AND dg.id = #{condition.groupId}
+        </if>
+        <if test="condition.groupCode != null">
+            AND dg.group_code = #{condition.groupCode}
+        </if>
+        <if test="condition.deviceName != null">
+            AND b.device_name LIKE CONCAT('%', #{condition.deviceName}, '%')
+        </if>
+        <if test="condition.branchId != null">
+            AND eb.id = #{condition.branchId}
+        </if>
+    </select>
+
+    <select id="findDeptDeviceDistribution" resultType="com.cgnpc.bbxpark.ioc.dto.model.DeviceDeptDistributionModel">
+        WITH RECURSIVE space_tree(id,space_name) AS (
+        SELECT id,space_name FROM BBX_PARK_SPACE
+        <where>
+            <if test="sslcCode != null and sslcCode != ''">
+                sslc_code = #{sslcCode}
+            </if>
+            <if test="tenantId != null">
+                AND tenant_id = #{tenantId}
+            </if>
+        </where>
+        UNION ALL
+        SELECT s.id,s.space_name FROM BBX_PARK_SPACE s
+        INNER JOIN space_tree st ON s.parent_space_id = st.id
+        )
+        SELECT
+        COALESCE(d.department_id, 0) as deptId,
+        COALESCE(d.department_name, '未分配部门') as deptName,
+        COUNT(*) as deviceCount,
+        ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) as numRate
+        FROM bbx_ioc_device d
+        WHERE d.space_id IN (SELECT id FROM space_tree)
+        AND d.deleted = 1
+        AND d.enable_status = 1
+        <if test="tenantId != null">
+            AND tenant_id = #{tenantId}
+        </if>
+        GROUP BY COALESCE(d.department_id, 0)
+    </select>
+
+    <select id="findIntelligentDistribution" resultType="com.cgnpc.bbxpark.ioc.dto.model.DeviceSpaceDistributionModel">
+        WITH RECURSIVE space_tree(id, parent_space_id, root_id, space_name) AS (
+        SELECT id, parent_space_id, id AS root_id, space_name
+        FROM bbx_park_space
+        WHERE deleted = 1 AND tenant_id = #{tenantId}
+        <choose>
+            <when test="spaceId != null">
+                AND parent_space_id = #{spaceId}
+            </when>
+            <otherwise>
+                AND parent_space_id = 0
+            </otherwise>
+        </choose>
+        UNION ALL
+        SELECT s.id, s.parent_space_id, st.root_id, s.space_name
+        FROM bbx_park_space s
+        INNER JOIN space_tree st ON s.parent_space_id = st.id
+        WHERE s.deleted = 1 AND s.tenant_id = #{tenantId} )
+        SELECT
+        st.root_id AS spaceId,
+        MAX(ps.space_name) AS spaceName,
+        COUNT(DISTINCT d.id) AS deviceCount,
+        CASE WHEN EXISTS (
+        SELECT 1
+        FROM bbx_park_space child
+        WHERE child.parent_space_id = st.root_id
+        AND child.deleted = 1
+        AND child.tenant_id = #{tenantId}
+        ) THEN 1 ELSE 0 END AS hasChildren
+        FROM space_tree st
+        LEFT JOIN bbx_park_space ps ON st.root_id = ps.id
+        LEFT JOIN BBX_IOC_DEVICE d ON st.id = d.space_id
+        AND d.deleted = 1
+        AND d.ENABLE_STATUS = 1
+        <if test="iotDevice != null">
+            AND d.IOT_DEVICE_PLATFORM != 0
+        </if>
+        GROUP BY st.root_id
+    </select>
+
+    <select id="findDeviceGroupAlarm" resultType="com.cgnpc.bbxpark.ioc.dto.model.AlarmAnalysisModel">
+        WITH RECURSIVE
+        space_tree(id, space_name) AS (
+        SELECT id, space_name FROM bbx_park_space
+        <where>
+            <if test="condition.sslcCode != null and condition.sslcCode != ''">
+                sslc_code = #{condition.sslcCode}
+            </if>
+            <if test="tenantId != null">
+                AND tenant_id = #{tenantId}
+            </if>
+        </where>
+        UNION ALL
+        SELECT s.id, s.space_name FROM bbx_park_space s
+        INNER JOIN space_tree st ON s.parent_space_id = st.id
+        ),
+        group_tree(id, group_parent_id, root_id, group_name) AS (
+        -- 获取直接子分组（根分组或指定分组下的子分组）
+        SELECT id, group_parent_id, id AS root_id, group_name
+        FROM BBX_DEVICE_GROUP
+        <where>
+            <choose>
+                <when test="condition.groupId != null">
+                    group_parent_id = #{condition.groupId}
+                </when>
+                <otherwise>
+                    group_parent_id =0   -- 未传入groupId时展示根级分组
+                </otherwise>
+            </choose>
+            <if test="tenantId != null">
+                AND tenant_id = #{tenantId}
+            </if>
+        </where>
+        UNION ALL
+        -- 递归获取所有后代分组（用于统计告警数量）
+        SELECT dg.id, dg.group_parent_id, gt.root_id, dg.group_name
+        FROM BBX_DEVICE_GROUP dg
+        INNER JOIN group_tree gt ON dg.group_parent_id = gt.id
+        <if test="tenantId != null">
+            AND dg.tenant_id = #{tenantId}
+        </if>
+        )
+        SELECT
+        gt.root_id AS id,
+        MAX(dg.group_name) AS name,
+        'group' AS type,
+        COUNT(DISTINCT a.id) AS alarmCount
+        FROM group_tree gt
+        LEFT JOIN BBX_DEVICE_GROUP dg ON gt.root_id = dg.id
+        LEFT JOIN BBX_DEVICE_GROUP_REL dgr ON gt.id = dgr.group_id
+        LEFT JOIN BBX_ALARM_DEVICE ad ON dgr.DEVICE_ID = ad.device_id
+        LEFT JOIN BBX_ALARM_INFO a ON ad.alarm_id = a.id AND a.alarm_status != 3
+        LEFT JOIN BBX_IOC_DEVICE d ON dgr.device_id = d.id
+        AND d.SPACE_ID IN (SELECT id FROM space_tree)
+        GROUP BY gt.root_id
+        ORDER BY gt.root_id   <!-- 可选排序，按分组ID排序 -->
+    </select>
+
+    <select id="findDeviceAlarm" resultType="com.cgnpc.bbxpark.ioc.dto.model.AlarmAnalysisModel">
+        WITH RECURSIVE
+        space_tree(id) AS (
+        SELECT id FROM bbx_park_space
+        <where>
+            <if test="condition.sslcCode != null and condition.sslcCode != ''">
+                sslc_code = #{condition.sslcCode}
+            </if>
+            <if test="tenantId != null">
+                AND tenant_id = #{tenantId}
+            </if>
+        </where>
+        UNION ALL
+        SELECT s.id FROM bbx_park_space s
+        INNER JOIN space_tree st ON s.parent_space_id = st.id
+        )
+        SELECT
+        d.id as device_id,
+        d.device_name as name,
+        'device' as type,
+        COUNT(DISTINCT a.id) as alarmCount
+        FROM BBX_DEVICE_GROUP_REL dgr
+        INNER JOIN BBX_IOC_DEVICE d ON dgr.DEVICE_ID = d.id
+        AND d.SPACE_ID IN (SELECT id FROM space_tree)
+        LEFT JOIN BBX_ALARM_DEVICE ad ON d.id = ad.device_id
+        LEFT JOIN BBX_ALARM_INFO a ON ad.alarm_id = a.id
+        AND a.alarm_status != 3
+        WHERE d.id IS NOT NULL
+        <if test="condition.groupId != null">
+            AND dgr.group_id = #{condition.groupId}
+        </if>
+        GROUP BY d.id, d.device_name
+    </select>
+
+    <update id="batchUpdateDevices">
+        UPDATE bbx_ioc_device
+        SET
+        reading_value = CASE id
+        <foreach collection="iocDevices" item="device">
+            WHEN #{device.id} THEN #{device.readingValue}
+        </foreach>
+        ELSE reading_value
+        END,
+        reading_time = CASE id
+        <foreach collection="iocDevices" item="device">
+            WHEN #{device.id} THEN #{device.readingTime}
+        </foreach>
+        ELSE reading_time
+        END,
+        reading_img = CASE id
+        <foreach collection="iocDevices" item="device">
+            WHEN #{device.id} THEN #{device.readingImg}
+        </foreach>
+        ELSE reading_img
+        END
+        WHERE id IN
+        <foreach collection="iocDevices" item="device" open="(" separator="," close=")">
+            #{device.id}
+        </foreach>
+    </update>
+</mapper>

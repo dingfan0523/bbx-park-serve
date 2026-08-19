@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.traffic.mapper.VehicleApplyRepository">
+    <select id="getCallTaxiReasonAnalysis" resultType="com.cgnpc.bbxpark.ioc.dto.model.CallTaxiReasonStatModel">
+        SELECT
+        COALESCE(call_reason, '其他') AS callReason,
+        COUNT(*) AS count
+        FROM dwd_vehicle_apply WHERE create_time BETWEEN #{start} AND #{end}
+        GROUP BY COALESCE(call_reason, '其他')
+    </select>
+
+    <select id="getCallTaxiDeptAnalysis" resultType="com.cgnpc.bbxpark.ioc.dto.model.CallTaxiDeptStatModel">
+        SELECT
+        COALESCE(department, '其他') AS department,
+        COUNT(*) AS count
+        FROM dwd_vehicle_apply WHERE create_time BETWEEN #{start} AND #{end}
+        GROUP BY COALESCE(department, '其他')
+    </select>
+
+</mapper>

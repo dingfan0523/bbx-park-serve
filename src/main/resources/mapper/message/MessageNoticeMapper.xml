@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.message.mapper.MessageNoticeRepository">
+    <select id="findPage" resultType="com.cgnpc.bbxpark.message.dto.resp.MessageNoticeModel">
+        SELECT
+        a.*,
+        info.title,
+        info.content,
+        info.publish_time,
+        info.summary,
+        info.receiver_scope,
+        info.status,
+        info.remark,
+        info.receiver_id,
+        info.create_by nick_name,
+        info.publisher publisherId,
+        info.sending_settings sendingSettings
+        FROM
+        sys_message_notice a
+        left join sys_message_info info
+        on a.msg_id = info.id
+
+        <where>
+            <if test="condition.status != null">
+                AND info.status = #{condition.status}
+            </if>
+
+            <if test="condition.title != null and condition.title != ''">
+                AND info.title like concat('%',#{condition.title}, '%')
+            </if>
+            <if test="condition.type != null">
+                AND a.type = #{condition.type}
+            </if>
+            <if test="condition.typeId != null">
+                AND a.type_id = #{condition.typeId}
+            </if>
+        </where>
+        ORDER BY info.create_time DESC
+    </select>
+
+    <select id="findList" resultType="com.cgnpc.bbxpark.message.dto.resp.MessageNoticeModel">
+        SELECT
+        a.*,
+        info.title,
+        info.content,
+        info.publish_time,
+        info.summary,
+        info.receiver_scope,
+        info.status,
+        info.remark,
+        info.receiver_id,
+        info.create_by nick_name,
+        info.publisher publisherId
+        FROM
+        sys_message_notice a
+        left join sys_message_info info
+        on a.msg_id = info.id
+        <where>
+            <if test="condition.status != null and condition.status != ''">
+                AND info.status = #{condition.status}
+            </if>
+
+            <if test="condition.title != null and condition.title != ''">
+                AND info.title like concat('%',#{condition.title}, '%')
+            </if>
+            <if test="condition.type != null and condition.type != ''">
+                AND a.type = #{condition.type}
+            </if>
+        </where>
+        ORDER BY info.create_time DESC
+    </select>
+</mapper>

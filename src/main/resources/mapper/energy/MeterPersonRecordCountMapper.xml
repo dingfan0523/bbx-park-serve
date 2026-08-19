@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.energy.mapper.MeterPersonRecordCountRepository">
+    <select id="findAreaCompare" resultType="com.cgnpc.bbxpark.ioc.dto.model.ElectricityAreaCompareModel">
+        WITH
+        target_branches AS (
+        SELECT id, branch_name FROM bbx_energy_branch
+        WHERE branch_type = #{branchType} AND tenant_id = #{tenantId} AND (
+        <choose>
+            <when test="branchId == null">
+                parent_id IS NULL
+            </when>
+            <otherwise>
+                parent_id = #{branchId}
+            </otherwise>
+        </choose>
+        ) ),
+        last_in_range AS (
+        SELECT device_id, reading_value FROM (
+        SELECT device_id, reading_value,
+        ROW_NUMBER() OVER (PARTITION BY device_id ORDER BY count_time DESC) AS rn
+        FROM bbx_meter_person_record_count
+        WHERE count_time BETWEEN #{startTime} AND #{endTime} AND tenant_id = #{tenantId}
+        ) t WHERE rn = 1 ),
+        last_before_range AS (
+        SELECT device_id, reading_value FROM (
+        SELECT device_id, reading_value,
+        ROW_NUMBER() OVER (PARTITION BY device_id ORDER BY count_time DESC) AS rn
+        FROM bbx_meter_person_record_count
+        WHERE count_time &lt; #{startTime} AND tenant_id = #{tenantId}
+        ) t WHERE rn = 1 ),
+        first_in_range AS (
+        SELECT device_id, reading_value FROM (
+        SELECT device_id, reading_value,
+        ROW_NUMBER() OVER (PARTITION BY device_id ORDER BY count_time ASC) AS rn
+        FROM bbx_meter_person_record_count
+        WHERE count_time BETWEEN #{startTime} AND #{endTime}
+        AND tenant_id = #{tenantId}
+        ) t WHERE rn = 1 ),
+        device_energy AS (
+        SELECT
+        l.device_id,
+        l.reading_value - COALESCE(b.reading_value, f.reading_value, l.reading_value) AS energy
+        FROM last_in_range l
+        LEFT JOIN last_before_range b ON l.device_id = b.device_id
+        LEFT JOIN first_in_range f ON l.device_id = f.device_id
+        ),
+        branch_energy AS (
+        SELECT
+        bd.branch_id,
+        SUM(COALESCE(de.energy, 0)) AS total_energy
+        FROM bbx_branch_device bd
+        LEFT JOIN device_energy de ON bd.device_id = de.device_id
+        WHERE bd.branch_id IN (SELECT id FROM target_branches)
+        AND bd.tenant_id = #{tenantId}
+        GROUP BY bd.branch_id
+        )
+        SELECT
+        tb.id AS id,
+        tb.branch_name AS branchName,
+        COALESCE(be.total_energy, 0) AS electricity,
+        CASE WHEN EXISTS (
+        SELECT 1
+        FROM bbx_energy_branch child
+        WHERE child.parent_id = tb.id
+        AND child.tenant_id = #{tenantId}
+        AND child.branch_type = #{branchType}
+        ) THEN 1 ELSE 0 END AS hasChildren
+        FROM target_branches tb
+        LEFT JOIN branch_energy be ON tb.id = be.branch_id
+        ORDER BY tb.id
+    </select>
+
+    <select id="getMonthlyPerCapitaTrend" resultType="com.cgnpc.bbxpark.ioc.dto.model.ElectricityPerCapitaTrendModel">
+        WITH
+        -- 目标设备：只取顶级支路（parent_id IS NULL）下的设备
+        target_devices AS (
+        SELECT DISTINCT bd.device_id
+        FROM bbx_branch_device bd
+        INNER JOIN bbx_energy_branch b ON bd.branch_id = b.id AND b.tenant_id=#{tenantId}
+        WHERE b.parent_id IS NULL
+        ),
+        -- 1. 获取每个设备在指定年份内的所有抄表记录（取每天最后一条）
+        daily_last AS (
+        SELECT device_id, TRUNC(count_time) AS record_date, reading_value,
+        ROW_NUMBER() OVER (PARTITION BY device_id, TRUNC(count_time) ORDER BY count_time DESC) AS rn
+        FROM bbx_meter_person_record_count
+        WHERE count_time >= TO_DATE(#{year} || '-01-01', 'YYYY-MM-DD')
+        AND count_time &lt; TO_DATE(#{year}+1 || '-01-01', 'YYYY-MM-DD')
+        AND device_id IN (SELECT device_id FROM target_devices)
+        AND tenant_id=#{tenantId}
+        ),
+        -- 2. 每个设备每月最后一条记录
+        month_last AS (
+        SELECT device_id, EXTRACT(YEAR FROM record_date) AS yr, EXTRACT(MONTH FROM record_date) AS mon,
+        reading_value,
+        ROW_NUMBER() OVER (PARTITION BY device_id, EXTRACT(YEAR FROM record_date), EXTRACT(MONTH FROM record_date)
+        ORDER BY record_date DESC) AS rn
+        FROM daily_last WHERE rn = 1
+        ),
+        -- 3. 获取每个设备在年初之前（上一年12月31日之前）的最后一条记录
+        before_year_last AS (
+        SELECT device_id, reading_value,
+        ROW_NUMBER() OVER (PARTITION BY device_id ORDER BY count_time DESC) AS rn
+        FROM bbx_meter_person_record_count
+        WHERE count_time &lt; TO_DATE(#{year} || '-01-01', 'YYYY-MM-DD')
+        AND device_id IN (SELECT device_id FROM target_devices)
+        AND tenant_id=#{tenantId}
+        ),
+        -- 4. 关联上月月末值（用于计算1月能耗）
+        month_with_prev AS (
+        SELECT m.device_id, m.yr, m.mon, m.reading_value,
+        LAG(m.reading_value) OVER (PARTITION BY m.device_id ORDER BY m.mon) AS prev_reading,
+        -- 对于1月，使用年初之前的最后一条记录作为 prev
+        CASE WHEN m.mon = 1 THEN b.reading_value ELSE NULL END AS year_start_reading
+        FROM month_last m
+        LEFT JOIN before_year_last b ON m.device_id = b.device_id AND b.rn = 1
+        WHERE m.rn = 1
+        ),
+        -- 5. 计算每个设备每月能耗
+        device_month_energy AS (
+        SELECT device_id, yr, mon,
+        reading_value - COALESCE(prev_reading, year_start_reading, reading_value) AS energy
+        FROM month_with_prev
+        ),
+        -- 6. 按月汇总
+        month_energy_total AS (
+        SELECT mon, SUM(COALESCE(energy, 0)) AS total_energy
+        FROM device_month_energy
+        GROUP BY mon
+        ),
+        -- 7. 生成1~12月序列
+        months AS (SELECT LEVEL AS mon FROM DUAL CONNECT BY LEVEL &lt;= 12)
+        SELECT m.mon AS date, COALESCE(e.total_energy, 0) AS personElectricity
+        FROM months m
+        LEFT JOIN month_energy_total e ON m.mon = e.mon
+        ORDER BY m.mon
+    </select>
+
+    <select id="getDailyPerCapitaTrend" resultType="com.cgnpc.bbxpark.ioc.dto.model.ElectricityPerCapitaTrendModel">
+        WITH
+        -- 目标设备：只取顶级支路（parent_id IS NULL）下的设备
+        target_devices AS (
+        SELECT DISTINCT bd.device_id
+        FROM bbx_branch_device bd
+        INNER JOIN bbx_energy_branch b ON bd.branch_id = b.id AND b.tenant_id=#{tenantId}
+        WHERE b.parent_id IS NULL
+        ),
+        -- 1. 获取指定月份内所有设备的抄表记录（取每天最后一条）
+        daily_last AS (
+        SELECT device_id, TRUNC(count_time) AS record_date, reading_value,
+        ROW_NUMBER() OVER (PARTITION BY device_id, TRUNC(count_time) ORDER BY count_time DESC) AS rn
+        FROM bbx_meter_person_record_count
+        WHERE count_time >= TO_DATE(#{year} || '-' || #{month} || '-01', 'YYYY-MM-DD')
+        AND count_time &lt; ADD_MONTHS(TO_DATE(#{year} || '-' || #{month} || '-01', 'YYYY-MM-DD'), 1)
+        AND device_id IN (SELECT device_id FROM target_devices)
+        AND tenant_id=#{tenantId}
+        ),
+        -- 2. 获取每个设备在当月第一天之前的最后一条记录
+        before_month_last AS (
+        SELECT device_id, reading_value,
+        ROW_NUMBER() OVER (PARTITION BY device_id ORDER BY count_time DESC) AS rn
+        FROM bbx_meter_person_record_count
+        WHERE count_time &lt; TO_DATE(#{year} || '-' || #{month} || '-01', 'YYYY-MM-DD')
+        AND device_id IN (SELECT device_id FROM target_devices)
+        AND tenant_id=#{tenantId}
+        ),
+        -- 3. 计算每日能耗（当日读数 - 前一日读数，第一天使用月初之前的读数作为基准）
+        daily_with_prev AS (
+        SELECT d.device_id, d.record_date, d.reading_value,
+        LAG(d.reading_value) OVER (PARTITION BY d.device_id ORDER BY d.record_date) AS prev_reading,
+        -- 第一天的基准值
+        CASE WHEN ROW_NUMBER() OVER (PARTITION BY d.device_id ORDER BY d.record_date) = 1
+        THEN b.reading_value ELSE NULL END AS month_start_reading
+        FROM daily_last d
+        LEFT JOIN before_month_last b ON d.device_id = b.device_id AND b.rn = 1
+        WHERE d.rn = 1
+        ),
+        -- 4. 计算每个设备每日能耗
+        device_daily_energy AS (
+        SELECT device_id, record_date,
+        reading_value - COALESCE(prev_reading, month_start_reading, reading_value) AS energy
+        FROM daily_with_prev
+        ),
+        -- 5. 按日汇总
+        daily_energy_total AS (
+        SELECT record_date, SUM(COALESCE(energy, 0)) AS total_energy
+        FROM device_daily_energy
+        GROUP BY record_date
+        ),
+        -- 6. 生成当月所有日期序列（从1号到月末）
+        days AS (
+        SELECT TO_DATE(#{year} || '-' || #{month} || '-01', 'YYYY-MM-DD') + LEVEL - 1 AS day_date
+        FROM DUAL
+        CONNECT BY LEVEL &lt;= EXTRACT(DAY FROM LAST_DAY(TO_DATE(#{year} || '-' || #{month} || '-01', 'YYYY-MM-DD')))
+        )
+        SELECT d.day_date AS date, COALESCE(e.total_energy, 0) AS personElectricity
+        FROM days d
+        LEFT JOIN daily_energy_total e ON d.day_date = e.record_date
+        ORDER BY d.day_date
+    </select>
+</mapper>

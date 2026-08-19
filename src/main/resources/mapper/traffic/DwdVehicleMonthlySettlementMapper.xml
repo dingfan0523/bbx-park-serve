@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.traffic.mapper.DwdVehicleMonthlySettlementRepository">
+    <select id="getMileageCount" resultType="java.lang.Double">
+        SELECT
+        ROUND(COALESCE(SUM(month_mileage), 0), 2) AS mileage
+        FROM dwd_vehicle_monthly_settlement
+        WHERE
+        settlement_date >= #{minDay}
+        AND settlement_date &lt;= #{maxDay}
+    </select>
+
+    <select id="getMileageByCarPlate" resultType="com.cgnpc.bbxpark.ioc.dto.model.TrafficSettlementMileageModel">
+        SELECT
+        car_plate AS carPlate,
+        ROUND(COALESCE(SUM(month_mileage), 0), 2) AS currentMileage
+        FROM dwd_vehicle_monthly_settlement
+        WHERE
+        settlement_date >= #{minDay}
+        AND settlement_date &lt;= #{maxDay}
+        GROUP BY car_plate
+    </select>
+
+    <select id="getCostCountByDate" resultType="com.cgnpc.bbxpark.ioc.dto.model.TrafficMaintenanceModel">
+        SELECT
+        TO_CHAR(settlement_date,  'MM') AS month,
+        ROUND(SUM(COALESCE(monthly_rent, 0) +
+        COALESCE((fuel_consumption * oil_price * month_mileage / 100), 0) +
+        COALESCE(fuel_subsidy, 0) +
+        COALESCE(parking_fee, 0) +
+        COALESCE(toll_fee, 0)), 2) AS directOperatingCost
+        FROM dwd_vehicle_monthly_settlement
+        WHERE
+        settlement_date >= #{minDay}
+        AND settlement_date &lt;= #{maxDay}
+        GROUP BY TO_CHAR(settlement_date, 'MM')
+    </select>
+
+    <select id="getCostCountByCarPlate" resultType="com.cgnpc.bbxpark.ioc.dto.model.TrafficMaintenanceModel">
+        SELECT
+        car_plate AS month,
+        ROUND(SUM(COALESCE(monthly_rent, 0) +
+        COALESCE((fuel_consumption * oil_price * month_mileage / 100), 0) +
+        COALESCE(fuel_subsidy, 0) +
+        COALESCE(parking_fee, 0) +
+        COALESCE(toll_fee, 0)), 2) AS directOperatingCost
+        FROM dwd_vehicle_monthly_settlement
+        WHERE
+        settlement_date >= #{minDay}
+        AND settlement_date &lt;= #{maxDay}
+        GROUP BY car_plate
+    </select>
+
+    <select id="getMileageUtilization" resultType="com.cgnpc.bbxpark.ioc.dto.model.TrafficMileageUtilizationModel">
+        SELECT
+        TO_CHAR(settlement_date,  'MM') AS month,
+        ROUND(SUM(COALESCE(monthly_package_mileage, 0)), 2) AS totalPackageMileage,
+        ROUND(SUM(COALESCE(month_mileage, 0)), 2) AS monthlyMileage,
+        ROUND(SUM(COALESCE(monthly_package_mileage, 0) - COALESCE(month_mileage, 0)), 2) AS remainingMileage
+        FROM dwd_vehicle_monthly_settlement
+        WHERE
+        settlement_date >= #{minDay}
+        AND settlement_date &lt;= #{maxDay}
+        GROUP BY TO_CHAR(settlement_date, 'MM')
+    </select>
+
+</mapper>

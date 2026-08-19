@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cgnpc.bbxpark.property.mapper.MaterialRepository">
+    <select id="getMaterialSpaceCount" resultType="com.cgnpc.bbxpark.ioc.dto.model.MaterialSpaceCountModel">
+        SELECT
+            space_id AS id,
+            COUNT(*) AS totalNum
+        FROM bbx_material
+        WHERE space_id IS NOT NULL
+        AND deleted = 1
+        <if test="tenantId != null">
+            and tenant_id =#{tenantId}
+        </if>
+        GROUP BY space_id
+    </select>
+
+    <select id="getSpaceIdList" resultType="java.lang.Long">
+        SELECT DISTINCT space_id
+        FROM bbx_material
+        WHERE space_id IS NOT NULL
+        AND deleted = 1
+        <if test="tenantId != null">
+            and tenant_id =#{tenantId}
+        </if>
+    </select>
+
+    <select id="getMaterialTypeCount" resultType="com.cgnpc.bbxpark.ioc.dto.model.MaterialInventoryTypeModel">
+        SELECT
+            CASE
+            WHEN material_type = 1 THEN '器材'
+            WHEN material_type = 2 THEN '耗材-备品'
+            WHEN material_type = 3 THEN '耗材-备件'
+            ELSE '其他类型'
+            END AS name,
+            material_type as code,
+            SUM(GREATEST(stock_quantity, 0)) AS totalNum
+        FROM bbx_material
+        where deleted = 1
+        <if test="tenantId != null">
+            and tenant_id =#{tenantId}
+        </if>
+        GROUP BY material_type
+        ORDER BY totalNum desc
+    </select>
+
+    <select id="getMaterialInventoryHealth" resultType="com.cgnpc.bbxpark.ioc.dto.model.MaterialInventoryHealthModel">
+        SELECT
+            CASE stock_status
+            WHEN 1 THEN '库存充足'
+            WHEN 2 THEN '库存不足'
+            WHEN 3 THEN '库存缺货'
+            ELSE '其他类型'
+            END AS name,
+            COUNT(*) AS totalNum
+        FROM bbx_material
+        WHERE deleted = 1
+        <if test="tenantId != null">
+            and tenant_id =#{tenantId}
+        </if>
+        GROUP BY stock_status
+    </select>
+
+    <select id="getMaterialTurnoverRank" resultType="com.cgnpc.bbxpark.ioc.dto.model.MaterialTurnoverRankModel">
+        SELECT
+            stock_quantity AS totalNum,
+            material_name AS name,
+            CASE
+                WHEN outbound_quantity = 0 THEN 0.00
+                ELSE ROUND((outbound_quantity * 1.0) / stock_quantity * 100, 2)
+             END AS turnoverRate
+        FROM bbx_material
+        WHERE deleted = 1
+        AND material_type IN (2,3)
+        <if test="tenantId != null">
+            and tenant_id =#{tenantId}
+        </if>
+        <if test="type == 1">
+            ORDER BY turnoverRate DESC
+        </if>
+        <if test="type == 2">
+            ORDER BY turnoverRate asc
+        </if>
+        FETCH FIRST 5 ROWS ONLY
+    </select>
+
+    <select id="getMaterialUsageRank" resultType="com.cgnpc.bbxpark.ioc.dto.model.MaterialUsageRankModel">
+        SELECT
+            stock_quantity AS totalNum,
+            material_name AS name,
+            CASE
+            WHEN (original_stock + inbound_quantity) = 0 THEN 0.00
+            ELSE ROUND(outbound_quantity / ((original_stock + inbound_quantity) * 1.0)  * 100 , 2)
+            END AS useRate
+        FROM bbx_material
+        WHERE deleted = 1
+        AND material_type = 1
+        <if test="tenantId != null">
+            and tenant_id =#{tenantId}
+        </if>
+        <if test="type == 1">
+            ORDER BY useRate DESC
+        </if>
+        <if test="type == 2">
+            ORDER BY useRate asc
+        </if>
+        FETCH FIRST 5 ROWS ONLY
+    </select>
+
+    <select id="getMaterialAlarmRate" resultType="java.lang.Double">
+        SELECT
+            ROUND(
+            CASE WHEN COUNT(*) = 0 THEN 0
+            ELSE COALESCE(SUM(CASE WHEN stock_status != 1 THEN 1 ELSE 0 END), 0) / (COUNT(*) * 1.0) * 100
+            END,
+            2
+            ) AS rate
+        FROM bbx_material
+        WHERE  deleted = 1
+        <if test="tenantId != null">
+            and tenant_id =#{tenantId}
+        </if>
+    </select>
+</mapper>

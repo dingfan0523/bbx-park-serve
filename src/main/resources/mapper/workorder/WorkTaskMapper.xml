@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cgnpc.bbxpark.workorder.mapper.WorkTaskRepository">
+    <select id="getPatrolExecOverview" resultType="com.cgnpc.bbxpark.ioc.dto.model.PatrolExecOverviewModel">
+        SELECT COALESCE(SUM(distance),0) AS estMileage,
+        COALESCE(SUM(use_time),0) AS estDuration
+        FROM bbx_work_task WHERE business_type = #{businessType} AND tenant_id = #{tenantId} AND deleted =1
+    </select>
+
+    <select id="getPatrolRouteTypeStat" resultType="com.cgnpc.bbxpark.ioc.dto.model.PatrolRouteTypeStatModel">
+        SELECT
+        t.business_id AS type,
+        COUNT(CASE WHEN i.error_status = 0 THEN 1 END) AS normalCount,
+        COUNT(CASE WHEN i.error_status = 1 THEN 1 END) AS abnormalCount
+        FROM bbx_work_order o
+        INNER JOIN bbx_work_task t ON o.id = t.work_id AND t.business_type = 3 AND t.tenant_id=#{tenantId} AND t.deleted = 1
+        INNER JOIN bbx_work_task_item i ON o.id = i.work_id AND i.business_type = 2 AND i.tenant_id=#{tenantId} AND i.deleted = 1 -- 假设明细表直接关联工单ID
+        WHERE o.status = 50 AND o.source = 'patrolPlan' AND o.tenant_id=#{tenantId} AND o.deleted = 1
+        GROUP BY t.business_id
+    </select>
+
+    <select id="getInspectionFaultTop10" resultType="com.cgnpc.bbxpark.ioc.dto.model.InspectionFaultRankModel">
+        SELECT
+        t.business_id AS id, t.name,t.space_full_path AS spaceName, COUNT(*) AS count
+        FROM bbx_work_order o
+        INNER JOIN bbx_work_task t ON o.id = t.work_id
+        AND t.business_type = 2 AND t.error_status = 1 AND t.tenant_id =#{tenantId} AND t.deleted = 1
+        WHERE o.source = 'inspectionPlan' AND o.status = 50 AND o.tenant_id =#{tenantId} AND o.deleted = 1
+        GROUP BY t.business_id
+        ORDER BY count DESC
+        LIMIT 10
+    </select>
+
+</mapper>

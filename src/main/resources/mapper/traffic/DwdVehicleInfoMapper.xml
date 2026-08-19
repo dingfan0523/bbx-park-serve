@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.traffic.mapper.DwdVehicleInfoRepository">
+    <select id="getVehicleTypeDistribution" resultType="com.cgnpc.bbxpark.ioc.dto.model.TrafficVehicleTypeModel">
+        SELECT
+        COALESCE(vehicle_type, '其他') AS typeName,
+        COUNT(*) AS count
+        FROM dwd_vehicle_info
+        GROUP BY COALESCE(vehicle_type, '其他')
+    </select>
+
+</mapper>

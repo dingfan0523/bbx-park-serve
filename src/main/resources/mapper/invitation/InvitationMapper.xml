@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.invitation.mapper.InvitationRepository">
+
+    <select id="pageApp" resultType="com.cgnpc.bbxpark.invitation.dto.model.InvitationModel">
+        SELECT DISTINCT
+        bi.* FROM bbx_invitation bi
+        LEFT JOIN bbx_invitation_visitor biv ON biv.invite_id = bi.id
+        LEFT JOIN bbx_invitation_space_relation bisr ON bisr.invite_id = bi.id
+        <where>
+            <if test="condition.tenantId != null">
+                AND bi.tenant_id = #{condition.tenantId}
+            </if>
+            <if test="condition.visitorName != null and  condition.visitorName != ''">
+                AND biv.name like concat('%',#{condition.visitorName},'%')
+            </if>
+            <if test="condition.spaceId != null">
+                AND bisr.space_id = #{condition.spaceId}
+            </if>
+            <if test="condition.createTimeStart != null and condition.createTimeEnd != null">
+                AND (#{condition.createTimeStart} &lt;= bi.create_time and #{condition.createTimeEnd} >= bi.create_time)
+            </if>
+            <if test="condition.inviteUname != null and condition.inviteUname != ''">
+                AND bi.invite_uname like concat('%',#{condition.inviteUname},'%')
+            </if>
+            <if test="condition.inviteUid != null">
+                AND bi.invite_uid =#{condition.inviteUid}
+            </if>
+            <if test="condition.receiveUname != null and condition.receiveUname != ''">
+                AND bi.receive_uname like concat('%',#{condition.receiveUname},'%')
+            </if>
+            <if test="condition.receiveUid != null">
+                AND bi.receive_uid =#{condition.receiveUid}
+            </if>
+            <if test="condition.inviteStatus != null">
+                AND bi.invite_status =#{condition.inviteStatus}
+            </if>
+            <if test="condition.visitReasonType != null">
+                AND bi.visit_reason_type =#{condition.visitReasonType}
+            </if>
+        </where>
+        ORDER BY bi.invite_status asc, bi.start_time asc
+    </select>
+
+    <select id="page" resultType="com.cgnpc.bbxpark.invitation.dto.model.InvitationModel">
+        SELECT DISTINCT bi.* FROM bbx_invitation bi
+        LEFT JOIN bbx_invitation_visitor biv ON biv.invite_id = bi.id
+        LEFT JOIN bbx_invitation_space_relation bisr ON bisr.invite_id = bi.id
+        <where>
+            <if test="condition.tenantId != null">
+                AND bi.tenant_id = #{condition.tenantId}
+            </if>
+            <if test="condition.visitorName != null and  condition.visitorName != ''">
+                AND biv.name like concat('%',#{condition.visitorName},'%')
+            </if>
+            <if test="condition.spaceId != null">
+                AND bisr.space_id = #{condition.spaceId}
+            </if>
+            <if test="condition.createTimeStart != null and condition.createTimeEnd != null">
+                AND (#{condition.createTimeStart} &lt;= bi.create_time and #{condition.createTimeEnd} >= bi.create_time)
+            </if>
+            <if test="condition.inviteUname != null and condition.inviteUname != ''">
+                AND bi.invite_uname like concat('%',#{condition.inviteUname},'%')
+            </if>
+            <if test="condition.inviteUid != null">
+                AND bi.invite_uid =#{condition.inviteUid}
+            </if>
+            <if test="condition.receiveUname != null and condition.receiveUname != ''">
+                AND bi.receive_uname like concat('%',#{condition.receiveUname},'%')
+            </if>
+            <if test="condition.receiveUid != null">
+                AND bi.receive_uid =#{condition.receiveUid}
+            </if>
+            <if test="condition.inviteStatus != null">
+                AND bi.invite_status =#{condition.inviteStatus}
+            </if>
+            <if test="condition.visitReasonType != null">
+                AND bi.visit_reason_type =#{condition.visitReasonType}
+            </if>
+        </where>
+        ORDER BY bi.create_time desc
+    </select>
+
+    <select id="allApprovePage" resultType="com.cgnpc.bbxpark.invitation.dto.model.InvitationModel">
+        SELECT DISTINCT
+        bi.*
+        FROM bbx_invitation bi
+        LEFT JOIN bbx_task_assignment bta ON bta.business_id = bi.id
+        <where>
+            <if test="condition.tenantId != null">
+                AND bi.tenant_id =#{condition.tenantId}
+            </if>
+            <if test="condition.userId != null">
+                AND bta.user_id =#{condition.userId}
+            </if>
+        </where>
+        ORDER BY bi.create_time desc
+    </select>
+
+</mapper>

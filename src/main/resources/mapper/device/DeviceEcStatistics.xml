@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.device.mapper.DeviceEcStatisticsRepository">
+    <select id="getEnergySavingOverview" resultType="com.cgnpc.bbxpark.ioc.dto.model.EnergySavingOverview">
+        SELECT COALESCE(ROUND(SUM(ec_duration),2),0) AS energySavingHours,
+        COALESCE(ROUND(SUM(ec_kwh),2),0) AS energySavedKwh
+        FROM bbx_device_ec_statistics
+        <where>
+            <if test="tenantId != null">
+                AND tenant_id = #{tenantId}
+            </if>
+        </where>
+    </select>
+
+    <select id="getDailyEnergyTrend" resultType="com.cgnpc.bbxpark.ioc.dto.model.DailyEnergyTrend">
+        SELECT TRUNC(statistics_time) AS date,
+        COALESCE(ROUND(SUM(ec_duration),2),0) AS energySavingHour,
+        COALESCE(ROUND(SUM(ec_kwh),2),0) AS energySavedKwh
+        FROM bbx_device_ec_statistics
+        WHERE statistics_time >= TRUNC(SYSDATE) - 30
+        <if test="tenantId != null">
+            AND tenant_id = #{tenantId}
+        </if>
+        GROUP BY TRUNC(statistics_time) ORDER BY date
+    </select>
+
+    <select id="getRoomEnergyRanking" resultType="com.cgnpc.bbxpark.ioc.dto.model.RoomEnergyRank">
+        SELECT r.id AS roomId,
+        r.room_name AS roomName,
+        COALESCE(ROUND(SUM(ec_kwh),2),0) AS energySavedKwh
+        FROM bbx_meeting_room r
+        LEFT JOIN bbx_meeting_room_device_rel rel ON r.id = rel.room_id
+        LEFT JOIN bbx_device_ec_statistics s ON rel.device_id = s.device_id
+        WHERE r.deleted = 1
+        <if test="tenantId != null">
+            AND r.tenant_id = #{tenantId}
+        </if>
+        GROUP BY r.id,r.room_name
+        ORDER BY energySavedKwh ${sortOrder}
+    </select>
+
+</mapper>

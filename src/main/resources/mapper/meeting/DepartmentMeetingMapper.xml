@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cgnpc.bbxpark.meeting.mapper.DepartmentMeetingRepository">
+    <select id="getDepartmentMeetingTime" resultType="com.cgnpc.bbxpark.meeting.domain.DepartmentMeeting">
+        SELECT
+            department_id AS departmentId,
+            meeting_type AS meetingType,
+            in_valid_flag AS inValidFlag,
+            SUM(duration) AS total
+        FROM
+            bbx_meeting_reserve
+        WHERE
+            1 = 1
+            <if test="beginTime != null and endTime != null">
+                AND start_time BETWEEN #{beginTime} AND #{endTime}
+            </if>
+            <if test="departmentIds != null and departmentIds.size() > 0">
+                AND department_id IN
+                <foreach collection="departmentIds" item="deptId" open="(" separator="," close=")">
+                    #{deptId}
+                </foreach>
+            </if>
+            <if test="tenantId != null">
+                AND tenant_id = #{tenantId}
+            </if>
+            AND draft = 0
+            AND cancel_flag = 0
+        GROUP BY
+            department_id,
+            meeting_type,
+            in_valid_flag
+        ORDER BY
+            department_id,
+            meeting_type,
+            in_valid_flag
+    </select>
+
+    <select id="getDepartmentMeetingCount" resultType="com.cgnpc.bbxpark.meeting.domain.DepartmentMeeting">
+        SELECT
+        department_id AS departmentId,
+        meeting_type AS meetingType,
+        in_valid_flag AS inValidFlag,
+        COUNT(*) AS  total
+        FROM
+        bbx_meeting_reserve
+        WHERE
+        1 = 1
+        <if test="beginTime != null and endTime != null">
+            AND start_time BETWEEN #{beginTime} AND #{endTime}
+        </if>
+        <if test="departmentIds != null and departmentIds.size() > 0">
+            AND department_id IN
+            <foreach collection="departmentIds" item="deptId" open="(" separator="," close=")">
+                #{deptId}
+            </foreach>
+        </if>
+        <if test="tenantId != null">
+            AND tenant_id = #{tenantId}
+        </if>
+        AND draft = 0
+        AND cancel_flag = 0
+        GROUP BY
+        department_id,
+        meeting_type,
+        in_valid_flag
+        ORDER BY
+        department_id,
+        meeting_type,
+        in_valid_flag
+    </select>
+
+    <select id="getDepartmentMeetingSum" resultType="com.cgnpc.bbxpark.meeting.domain.DepartmentMeetingSum">
+        SELECT
+            in_valid_flag AS inValidFlag,
+            SUM(duration) AS totalDurations,
+            COUNT(*) AS totalMeetings
+        FROM
+            bbx_meeting_reserve
+        WHERE
+            1=1
+        <if test="beginTime != null and endTime != null">
+            AND start_time BETWEEN #{beginTime} AND #{endTime}
+        </if>
+        <if test="departmentIds != null and departmentIds.size() > 0">
+            AND department_id IN
+            <foreach collection="departmentIds" item="deptId" open="(" separator="," close=")">
+                #{deptId}
+            </foreach>
+        </if>
+        <if test="tenantId != null">
+            AND tenant_id = #{tenantId}
+        </if>
+        AND draft = 0
+        AND cancel_flag = 0
+        GROUP BY
+        in_valid_flag
+    </select>
+
+    <select id="findSubDepartments" resultType="com.cgnpc.bbxpark.space.dto.model.DepartmentInfoModel">
+        SELECT
+            *
+        FROM
+            uic_department_info
+        WHERE
+            parent_id = #{departmentId}
+        AND id != #{departmentId}
+    </select>
+
+    <select id="getMemberByDeptIds" resultType="java.util.HashMap">
+        SELECT
+            *
+        FROM
+            uic_department_member
+        WHERE
+            status = 0
+        <if test="departmentIds != null and departmentIds.size() > 0">
+            AND department_id IN
+            <foreach collection="departmentIds" item="deptId" open="(" separator="," close=")">
+                #{deptId}
+            </foreach>
+        </if>
+
+    </select>
+
+    <select id="queryDeptMeeting" parameterType="com.cgnpc.bbxpark.meeting.dto.param.DepartmentMeetingCountParam"
+            resultType="com.cgnpc.bbxpark.meeting.domain.DepartmentMeetingStats">
+        SELECT
+            r.department_id departmentId,
+            r.department_name departmentName,
+            COALESCE(COUNT(DISTINCT r.id), 0) AS totalMeetings,
+            COALESCE(SUM(r.in_valid_flag),0) AS invalidMeetings,
+            COALESCE(SUM(r.duration), 0) AS totalDurations,
+            COALESCE(SUM(sign_in.sign_count), 0) AS signInCount
+        FROM
+            bbx_meeting_reserve r
+        LEFT JOIN
+        (SELECT reserve_id,COUNT(DISTINCT id) AS sign_count FROM bbx_meeting_reserve_sign WHERE sign_time IS NOT NULL GROUP BY reserve_id )
+        sign_in ON r.id = sign_in.reserve_id
+        WHERE r.draft = 0
+        AND r.cancel_flag = 0
+        <if test="param.startTime != null and param.endTime != null">
+            AND r.start_time BETWEEN #{param.startTime} AND #{param.endTime}
+        </if>
+        <if test="param.tenantId != null">
+            AND r.tenant_id = #{param.tenantId}
+        </if>
+        <if test="param.departmentIds != null and param.departmentIds.size() > 0 ">
+            AND r.department_id IN
+            <foreach collection="param.departmentIds" item="deptId" open="(" separator="," close=")">
+                #{deptId}
+            </foreach>
+        </if>
+        <if test="param.departmentName != null and param.departmentName != ''">
+            AND r.department_name LIKE CONCAT('%', #{param.departmentName}, '%')
+        </if>
+        GROUP BY
+            r.department_id, r.department_name
+        <if test="param.sortBy != null and param.sortBy != ''">
+            ORDER BY ${param.sortBy}
+        </if>
+        <if test="param.sortOrder != null and param.sortOrder != ''">
+            ${param.sortOrder}
+        </if>
+    </select>
+
+    <select id="queryDepartmentMeetingDetail" parameterType="com.cgnpc.bbxpark.meeting.dto.param.DepartmentMeetingCountParam"
+            resultType="com.cgnpc.bbxpark.meeting.domain.DepartmentMeetingDetail">
+        SELECT
+            r.id AS id,
+            r.reserve_name AS reserveName,
+            r.room_name AS roomName,
+            r.in_valid_flag AS inValidFlag,
+            r.duration AS durations,
+            r.department_name AS departmentName,
+            COUNT(sign_in.id) AS signInCount
+        FROM
+            bbx_meeting_reserve r
+        LEFT JOIN
+            bbx_meeting_reserve_sign sign_in ON r.id = sign_in.reserve_id
+            AND sign_in.sign_time IS NOT NULL
+        WHERE
+             r.draft = 0
+        AND r.cancel_flag = 0
+        <if test="param.departmentIds != null and param.departmentIds.size() > 0 ">
+            AND r.department_id IN
+            <foreach collection="param.departmentIds" item="deptId" open="(" separator="," close=")">
+                #{deptId}
+            </foreach>
+        </if>
+        <if test="param.departmentId != null">
+            AND r.department_id = #{param.departmentId}
+        </if>
+        <if test="param.startTime != null and param.endTime != null">
+            AND r.start_time BETWEEN #{param.startTime} AND #{param.endTime}
+        </if>
+        <if test="param.reserveNameLike != null and param.reserveNameLike != ''">
+            AND r.reserve_name LIKE CONCAT('%', #{param.reserveNameLike}, '%')
+        </if>
+        <if test="param.inValidFlag != null">
+            AND r.in_valid_flag = #{param.inValidFlag}
+        </if>
+        <if test="param.tenantId != null">
+            AND r.tenant_id = #{param.tenantId}
+        </if>
+        GROUP BY
+            r.id
+        <if test="param.sortBy != null and param.sortBy != ''">
+            ORDER BY ${param.sortBy}
+        </if>
+        <if test="param.sortOrder != null and param.sortOrder != ''">
+            ${param.sortOrder}
+        </if>
+    </select>
+
+    <select id="findUserInfoByDepartment" resultType="com.cgnpc.bbxpark.space.dto.model.UserInfoModel">
+        SELECT DISTINCT ui.*
+        FROM `uic_user_info` ui
+        LEFT JOIN uic_tenant_member tm on tm.user_id = ui.id
+        LEFT JOIN uic_department_member dm on dm.user_id = ui.id
+        where ui.status != 2 and ui.identity = 1
+        <if test="tenantId != null">
+            AND tm.tenant_id= #{tenantId}
+        </if>
+          and dm.department_id = #{departmentId}
+    </select>
+</mapper>

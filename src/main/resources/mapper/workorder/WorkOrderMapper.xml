@@ -1,0 +1,546 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cgnpc.bbxpark.workorder.mapper.WorkOrderRepository">
+
+    <select id="selectPageByParam" resultType="com.cgnpc.bbxpark.workorder.domain.WorkOrder">
+        SELECT *
+        FROM bbx_work_order
+        WHERE deleted = 1
+        <if test="param.tenantId != null">
+            AND tenant_id = #{param.tenantId}
+        </if>
+        <if test="param.code != null">
+            AND code LIKE CONCAT('%', #{param.code}, '%')
+        </if>
+        <if test="param.dispatchType != null">
+            AND dispatch_type = #{param.dispatchType}
+        </if>
+        <if test="param.name != null and param.name != ''">
+            AND name LIKE CONCAT('%', #{param.name}, '%')
+        </if>
+        <if test="param.allotUname != null and param.allotUname != ''">
+            AND allot_uname LIKE CONCAT('%', #{param.allotUname}, '%')
+        </if>
+        <if test="param.processedPersonName != null and param.processedPersonName != ''">
+            AND processed_person_name LIKE CONCAT('%', #{param.processedPersonName}, '%')
+        </if>
+        <if test="param.status != null">
+            AND status = #{param.status}
+        </if>
+        <if test="param.spaceId != null and param.spaceId != ''">
+            AND FIND_IN_SET(#{param.spaceId}, REPLACE(space_id, '|', ',')) > 0
+        </if>
+        <if test="param.source != null and param.source != ''">
+            AND source = #{param.source}
+        </if>
+        <if test="param.startTime != null">
+            AND create_time &gt;= #{param.startTime}
+        </if>
+        <if test="param.endTime != null">
+            AND create_time &lt;= #{param.endTime}
+        </if>
+        <if test="param.creatorId != null">
+            AND (id in (select DISTINCT(work_id) from bbx_work_schedule_user where user_id = #{param.creatorId}) or (status in (40,50) and audit_uid = #{param.creatorId}))
+        </if>
+        <if test="param.outStatus != null ">
+            AND out_status = #{param.outStatus}
+        </if>
+        <if test="param.transferFlag != null and param.transferFlag">
+            AND transfer_uid IS NOT NULL
+        </if>
+        <if test="param.transferFlag != null and !param.transferFlag">
+            AND transfer_uid IS NULL
+        </if>
+        <if test="param.deviceIdList != null and param.deviceIdList.size() > 0">
+            AND (id in (SELECT DISTINCT work_order_id FROM bbx_work_order_device WHERE device_id IN
+            <foreach collection="param.deviceIdList " item="deviceId" open="(" separator=", "
+                     close=")">
+                #{deviceId}
+            </foreach>
+            )
+            OR id in (SELECT DISTINCT work_id FROM bbx_work_task  WHERE business_type IN (1,4) AND business_id IN
+            <foreach collection="param.deviceIdList " item="deviceId" open="(" separator=", "
+                     close=")">
+                #{deviceId}
+            </foreach>
+            ))
+
+
+        </if>
+        ORDER BY create_time DESC
+    </select>
+
+
+    <select id="getAvgExpendTimeByProcessedPersonId" resultType="java.lang.Double">
+        SELECT ROUND(AVG(expend_time), 1) AS averageExpendTime
+        FROM bbx_work_order
+        WHERE processed_person_id = #{processedPersonId}
+          AND expend_time IS NOT NULL
+          AND deleted = 1
+          AND status = #{completedStatus}
+    </select>
+
+    <select id="countWorkOrder" resultType="com.cgnpc.bbxpark.workorder.dto.model.WorkOrderCountModel">
+        SELECT COUNT(*) AS totalNum,
+        COALESCE(SUM(CASE WHEN status = 50 THEN 1 ELSE 0 END),0) AS finishNum,
+        (
+        SELECT source
+        FROM bbx_work_order
+        where deleted = 1 and (id in
+        (SELECT DISTINCT work_order_id from bbx_work_order_device
+        <where>
+            <if test="condition.deviceId != null">
+                device_id =#{condition.deviceId}
+            </if>
+            <if test="condition.tenantId != null and condition.tenantId != ''">
+                and tenant_id =#{condition.tenantId}
+            </if>
+        </where>
+        )
+        OR id in (SELECT DISTINCT work_id FROM bbx_work_task  WHERE business_type IN (1,4)
+            <if test="condition.deviceId != null">
+                AND business_id =#{condition.deviceId}
+            </if>
+            <if test="condition.tenantId != null and condition.tenantId != ''">
+                and tenant_id =#{condition.tenantId}
+            </if>
+        )
+        )
+        GROUP BY source ORDER BY COUNT(*) DESC LIMIT 1) AS source,
+        (
+        SELECT COUNT(*)
+        FROM bbx_work_order
+        where deleted = 1 and id in
+        (SELECT DISTINCT work_order_id from bbx_work_order_device
+        <where>
+            <if test="condition.deviceId != null">
+                device_id =#{condition.deviceId}
+            </if>
+            <if test="condition.tenantId != null and condition.tenantId != ''">
+                and tenant_id =#{condition.tenantId}
+            </if>
+        </where>)
+        GROUP BY source ORDER BY COUNT(*) DESC LIMIT 1) AS sourceNum
+        FROM bbx_work_order
+        where deleted = 1 and id in
+        (SELECT DISTINCT work_order_id from bbx_work_order_device
+        <where>
+            <if test="condition.deviceId != null">
+                device_id =#{condition.deviceId}
+            </if>
+            <if test="condition.tenantId != null and condition.tenantId != ''">
+                and tenant_id =#{condition.tenantId}
+            </if>
+        </where>)
+    </select>
+
+    <select id="getWorkOrderKeyMetrics" resultType="com.cgnpc.bbxpark.ioc.dto.model.WorkOrderKeyMetricsModel">
+        SELECT
+            COUNT(CASE WHEN status != 50 THEN 1 END) AS goingCount,
+            COALESCE(ROUND(
+                AVG(CASE WHEN status = 50 AND expend_time IS NOT NULL THEN expend_time END),1
+                ),0) AS avgHandleTime,
+            ROUND(
+                IFNULL(
+                (COUNT(CASE WHEN status = 50 THEN 1 END) * 1.0
+                / NULLIF(COUNT(*), 0)) * 100,0
+                ),2
+            ) AS oneTimeRate,
+            COALESCE(ROUND(
+                AVG(CASE WHEN response_time IS NOT NULL AND SOURCE IN ('person','alarm') THEN response_time END),1
+                ),0) AS firstHandleTime
+        FROM bbx_work_order
+        where deleted = 1
+        <if test="tenantId != null">
+            and tenant_id =#{tenantId}
+        </if>
+    </select>
+
+    <select id="getWorkOrderSourceAnalysis" resultType="com.cgnpc.bbxpark.ioc.dto.model.WorkOrderSourceAnalysisModel">
+        SELECT
+        name,
+        totalNum,
+        ROUND(totalNum * 100.0 / SUM(totalNum) OVER(), 2) AS numRate
+        FROM (
+            SELECT
+                CASE
+                WHEN source IN ('meterPlan', 'maintainPlan', 'inspectionPlan', 'patrolPlan', 'inventoryPlan')
+                THEN '合同计划'
+                WHEN source = 'person' THEN '报事报修'
+                WHEN source = 'alarm' THEN '设备告警'
+                WHEN source = 'taskPlan' THEN '业主任务'
+                ELSE COALESCE(source, '未知来源')
+                END AS name,
+                COUNT(*) AS totalNum
+            FROM bbx_work_order WHERE deleted = 1
+            <if test="tenantId != null">
+                and tenant_id =#{tenantId}
+            </if>
+            GROUP BY
+                CASE
+                WHEN source IN ('meterPlan', 'maintainPlan', 'inspectionPlan', 'patrolPlan', 'inventoryPlan')
+                THEN '合同计划'
+                WHEN source = 'person' THEN '报事报修'
+                WHEN source = 'alarm' THEN '设备告警'
+                WHEN source = 'taskPlan' THEN '业主任务'
+                ELSE COALESCE(source, '未知来源')
+                END
+        ) AS source_stats
+    </select>
+
+    <select id="getWorkOrderDepartmentAnalysis" resultType="com.cgnpc.bbxpark.ioc.dto.model.WorkOrderDepartmentAnalysisModel">
+        SELECT
+            COALESCE(department_name, '其他') AS name,
+            COUNT(*) AS totalNum,
+            COUNT(CASE WHEN status = 50 THEN 1 END) AS completeNum,
+            COUNT(CASE WHEN status != 50 THEN 1 END) AS noCompleteNum
+        FROM bbx_work_order
+        WHERE deleted = 1
+        <if test="tenantId != null">
+            and tenant_id =#{tenantId}
+        </if>
+        GROUP BY department_id, department_name
+        <if test="type != null and type == 1">
+            ORDER BY totalNum DESC
+        </if>
+        <if test="type != null and type == 2">
+            ORDER BY totalNum asc
+        </if>
+    </select>
+
+    <select id="getWorkOrderContractEffect" resultType="com.cgnpc.bbxpark.ioc.dto.model.WorkOrderContractEffectModel">
+        SELECT
+            CASE
+                WHEN source = 'meterPlan' THEN '抄表计划'
+                WHEN source = 'maintainPlan' THEN '维保计划'
+                WHEN source = 'inspectionPlan' THEN '巡检计划'
+                WHEN source = 'patrolPlan' THEN '巡更计划'
+                WHEN source = 'inventoryPlan' THEN '盘点计划'
+                ELSE '未知计划类型'
+            END AS name,
+            COUNT(CASE WHEN error_status == 1 THEN 1 END) AS errorNum,
+            COUNT(CASE WHEN error_status == 0 THEN 1 END) AS noErrorNum
+        FROM bbx_work_order WHERE deleted = 1
+            and status = 50
+            <if test="tenantId != null">
+                and tenant_id =#{tenantId}
+            </if>
+            AND source IN ('meterPlan', 'maintainPlan', 'inspectionPlan', 'patrolPlan', 'inventoryPlan')
+            GROUP BY source
+            ORDER BY
+            CASE
+                WHEN source = 'meterPlan' THEN 1
+                WHEN source = 'maintainPlan' THEN 2
+                WHEN source = 'inspectionPlan' THEN 3
+                WHEN source = 'patrolPlan' THEN 4
+                WHEN source = 'inventoryPlan' THEN 5
+                ELSE 6
+                END
+    </select>
+
+    <select id="getCompleteTrend" resultType="com.cgnpc.bbxpark.ioc.dto.model.WorkOrderHandleDateTrendModel">
+        SELECT
+            TO_CHAR(TRUNC(end_time), 'MM-dd') AS time,
+            COUNT(*) AS totalNum
+        FROM bbx_work_order WHERE deleted = 1
+        <if test="tenantId != null">
+            and tenant_id =#{tenantId}
+        </if>
+            AND status = 50
+            AND end_time >= DATEADD(DAY, -29, SYSDATE)
+            AND end_time &lt;= SYSDATE
+            GROUP BY TRUNC(end_time)
+    </select>
+
+    <select id="getEvaluateTrend" resultType="com.cgnpc.bbxpark.ioc.dto.model.WorkOrderHandleDateTrendModel">
+        SELECT
+            TO_CHAR(TRUNC(create_time), 'MM-dd') AS time,
+            ROUND(AVG(score), 2) AS avgScore
+        FROM bbx_work_evaluate WHERE deleted = 1
+        <if test="tenantId != null">
+            and tenant_id =#{tenantId}
+        </if>
+        and create_time >= DATEADD(DAY, -29, SYSDATE)
+        AND create_time &lt;= SYSDATE
+        GROUP BY TRUNC(create_time);
+    </select>
+
+    <select id="getWorkOrderUnsatisfied" resultType="com.cgnpc.bbxpark.ioc.dto.model.WorkOrderUnsatisfiedModel">
+        SELECT
+            CASE
+            WHEN w.source IN ('meterPlan', 'maintainPlan', 'inspectionPlan', 'patrolPlan', 'inventoryPlan') THEN '合同计划'
+            WHEN w.source = 'person' THEN '报事报修'
+            WHEN w.source = 'alarm' THEN '设备告警'
+            WHEN w.source = 'taskPlan' THEN '业主任务'
+            ELSE COALESCE(w.source, '未知来源')
+            END AS name,
+            w.source,
+            COALESCE(w.department_name, '其他') AS departmentName,
+            COALESCE(w.department_id, '其他') AS departmentId,
+            COUNT(DISTINCT w.id) AS totalNum
+        FROM bbx_work_order w
+        LEFT JOIN (
+            SELECT
+            work_id,
+            AVG(score) AS avg_score
+            FROM bbx_work_evaluate
+            GROUP BY work_id
+            ) e ON w.id = e.work_id
+        WHERE
+        e.avg_score &lt;= 3
+        AND e.avg_score IS NOT NULL
+        AND w.deleted = 1
+        <if test="tenantId != null">
+            and tenant_id =#{tenantId}
+        </if>
+        GROUP BY
+            CASE
+            WHEN w.source IN ('meterPlan', 'maintainPlan', 'inspectionPlan', 'patrolPlan', 'inventoryPlan') THEN '合同计划'
+            WHEN w.source = 'person' THEN '报事报修'
+            WHEN w.source = 'alarm' THEN '设备告警'
+            WHEN w.source = 'taskPlan' THEN '业主任务'
+            ELSE COALESCE(w.source, '未知来源')
+            END,
+             w.department_id,w.department_name
+    </select>
+
+    <select id="pageEvaluate" resultType="com.cgnpc.bbxpark.workorder.dto.model.WorkEvaluateModel">
+        SELECT
+            e.*,
+            w.code AS workCode
+        FROM bbx_work_evaluate e
+        INNER JOIN bbx_work_order w ON e.work_id = w.id
+        INNER JOIN (
+        SELECT
+            work_id,
+            AVG(score) AS avg_score
+            FROM bbx_work_evaluate
+            GROUP BY work_id
+            HAVING avg_score &lt;= 3
+        ) unsatisfied ON e.work_id = unsatisfied.work_id
+        WHERE w.deleted = 1
+        <if test="param.tenantId != null">
+            and w.tenant_id =#{param.tenantId}
+        </if>
+        <if test="param.departmentId != null">
+            and w.department_id =#{param.departmentId}
+        </if>
+        <if test="param.source != null">
+            and w.source =#{param.source}
+        </if>
+        <if test="param.sourceList != null and param.sourceList.size() > 0">
+            AND w.source in
+            <foreach collection="param.sourceList " item="source" open="(" separator=", "
+                     close=")">
+                #{source}
+            </foreach>
+        </if>
+    </select>
+
+    <select id="getWorkOrderSpaceAnalysis" resultType="com.cgnpc.bbxpark.ioc.dto.model.WorkOrderScreenSpaceAnalysisModel">
+        SELECT
+        CAST(space_id AS BIGINT) AS id,
+            CASE
+            WHEN source = 'person' THEN '报事报修'
+            WHEN source = 'alarm' THEN '设备告警'
+            ELSE COALESCE(source, '未知来源')
+            END AS name,
+            COUNT(*) AS totalNum
+        FROM bbx_work_order
+        WHERE space_id IS NOT NULL
+        AND REGEXP_LIKE(space_id, '^[0-9]+$')
+        AND deleted = 1
+        <if test="tenantId != null">
+            and tenant_id =#{tenantId}
+        </if>
+        AND source in ('person', 'alarm')
+        GROUP BY space_id, source
+        ORDER BY
+            CASE
+            WHEN source = 'person' THEN 1
+            WHEN source = 'alarm' THEN 2
+            ELSE 3
+            END
+    </select>
+
+    <select id="getSpaceIdList" resultType="java.lang.Long">
+        SELECT DISTINCT CAST(space_id AS BIGINT) AS space_id
+        FROM bbx_work_order
+        WHERE space_id IS NOT NULL
+        AND deleted = 1
+        <if test="tenantId != null">
+            and tenant_id =#{tenantId}
+        </if>
+        AND source in ('person', 'alarm')
+        AND REGEXP_LIKE(space_id, '^[0-9]+$')
+    </select>
+
+    <select id="getMaterialWorkUse"  resultType="com.cgnpc.bbxpark.ioc.dto.model.MaterialWorkUseModel">
+        SELECT
+            CASE
+            WHEN w.source IN ('meterPlan', 'maintainPlan', 'inspectionPlan', 'patrolPlan', 'inventoryPlan') THEN '合同计划'
+            WHEN w.source = 'person' THEN '报事报修'
+            WHEN w.source = 'alarm' THEN '设备告警'
+            WHEN w.source = 'taskPlan' THEN '业主任务'
+            ELSE '其他来源'
+            END AS name,
+            SUM(m.material_use_num) AS totalNum
+        FROM bbx_work_order w
+        INNER JOIN bbx_work_material m ON w.id = m.work_id
+        WHERE
+            w.source IS NOT NULL
+            AND w.deleted = 1
+        <if test="tenantId != null">
+            and w.tenant_id =#{tenantId}
+        </if>
+            AND m.material_use_num IS NOT NULL
+        GROUP BY
+            CASE
+            WHEN w.source IN ('meterPlan', 'maintainPlan', 'inspectionPlan', 'patrolPlan', 'inventoryPlan') THEN '合同计划'
+            WHEN w.source = 'person' THEN '报事报修'
+            WHEN w.source = 'alarm' THEN '设备告警'
+            WHEN w.source = 'taskPlan' THEN '业主任务'
+            ELSE '其他来源'
+            END
+    </select>
+
+    <select id="getWorkCompleteRate" resultType="java.lang.Double">
+        SELECT
+            ROUND(
+            CASE WHEN COUNT(*) = 0 THEN 0
+            ELSE COALESCE(SUM(CASE WHEN status = 50 THEN 1 ELSE 0 END),0) / (COUNT(*) * 1.0) * 100
+            END,
+            2
+            ) AS rate
+        FROM bbx_work_order
+        WHERE  deleted = 1
+        <if test="tenantId != null">
+            and tenant_id =#{tenantId}
+        </if>
+    </select>
+
+    <select id="getProblemDeviceIds" resultType="java.lang.Long">
+        SELECT DISTINCT wod.device_id FROM bbx_work_order_device wod
+        LEFT JOIN bbx_work_order wo ON wo.id = wod.work_order_id
+        WHERE
+        wo.deleted = 1
+        <if test="tenantId != null">
+            and wo.tenant_id =#{tenantId}
+        </if>
+        AND wo.status  != 50
+        AND wo.source  = 'person'
+    </select>
+
+<!--    <select id="getMeetingRoomHealth" resultType="com.cgnpc.bbxpark.ioc.dto.model.WeekRoomHealth">-->
+<!--        <![CDATA[-->
+<!--        WITH week_dates AS (-->
+<!--        SELECT TRUNC(SYSDATE, 'IW') - 1 + (LEVEL - 1) AS day_date-->
+<!--        FROM DUAL-->
+<!--        CONNECT BY LEVEL <= 7-->
+<!--        )-->
+<!--        ]]>-->
+<!--        SELECT-->
+<!--        w.day_date AS date,-->
+<!--        COALESCE(COUNT(DISTINCT CASE WHEN wod.id IS NOT NULL THEN wo.id END ), 0) AS count-->
+<!--        FROM week_dates w-->
+<!--        LEFT JOIN bbx_work_order wo-->
+<!--        ON TRUNC(wo.create_time) = w.day_date-->
+<!--        <if test="types != null and types.size() > 0">-->
+<!--            AND wo.type IN-->
+<!--            <foreach collection="types " item="type" open="(" separator=", " close=")">-->
+<!--                #{type}-->
+<!--            </foreach>-->
+<!--        </if>-->
+<!--        <if test="tenantId != null">-->
+<!--            AND wo.tenant_id =#{tenantId}-->
+<!--        </if>-->
+<!--        AND wo.deleted = 1-->
+<!--        LEFT JOIN bbx_work_order_device wod-->
+<!--        ON wo.id = wod.work_order_id-->
+<!--        <if test="tenantId != null">-->
+<!--            AND wod.tenant_id =#{tenantId}-->
+<!--        </if>-->
+<!--        AND (-->
+<!--        <if test="deviceIds != null and deviceIds.size() > 0">-->
+<!--            wod.device_id IN-->
+<!--            <foreach collection="deviceIds" item="id" open="(" separator="," close=")">-->
+<!--                #{id}-->
+<!--            </foreach>-->
+<!--        </if>-->
+<!--        <if test="spaceIds != null and spaceIds.size() > 0">-->
+<!--            <if test="deviceIds != null and deviceIds.size() > 0"> OR </if>-->
+<!--            wod.space_id IN-->
+<!--            <foreach collection="spaceIds" item="id" open="(" separator="," close=")">-->
+<!--                #{id}-->
+<!--            </foreach>-->
+<!--        </if>-->
+<!--        <if test="(deviceIds == null or deviceIds.size() == 0) and (spaceIds == null or spaceIds.size() == 0)">-->
+<!--            1=0  &lt;!&ndash; 若无任何条件，则无匹配工单 &ndash;&gt;-->
+<!--        </if>-->
+<!--        )-->
+<!--        AND wod.deleted = 1-->
+<!--        GROUP BY w.day_date-->
+<!--        ORDER BY w.day_date-->
+<!--    </select>-->
+    <select id="getMeetingRoomHealth" resultType="com.cgnpc.bbxpark.ioc.dto.model.WeekRoomHealth">
+        <![CDATA[
+        WITH week_dates AS (
+            SELECT TRUNC(SYSDATE, 'IW') - 1 + (LEVEL - 1) AS day_date
+            FROM DUAL
+            CONNECT BY LEVEL <= 7
+        )
+        ]]>
+        SELECT
+        w.day_date AS date,
+        COALESCE(COUNT(DISTINCT wo.id), 0) AS count
+        FROM week_dates w
+        LEFT JOIN bbx_work_order wo
+        ON TRUNC(wo.create_time) = w.day_date
+        <if test="types != null and types.size() > 0">
+            AND wo.type IN
+            <foreach collection="types" item="type" open="(" separator="," close=")">
+                #{type}
+            </foreach>
+        </if>
+        <if test="tenantId != null">
+            AND wo.tenant_id = #{tenantId}
+        </if>
+        AND wo.deleted = 1
+        -- 只有当满足设备/空间筛选条件时才需要关联设备表，否则直接基于 wo.space_id 判断
+        AND (
+        -- 条件1：工单自身的 space_id 在传入的空间集合中
+        <if test="spaceIds != null and spaceIds.size() > 0">
+            <foreach collection="spaceIds" item="sid" separator="OR">
+                FIND_IN_SET(#{sid},REPLACE(wo.space_id,'|',',')) > 0
+            </foreach>
+            <if test="deviceIds != null and deviceIds.size() > 0">
+                OR
+            </if>
+        </if>
+        -- 条件2：工单关联的设备在传入的设备集合中（需要 EXISTS 子查询）
+        <if test="deviceIds != null and deviceIds.size() > 0">
+            EXISTS (
+            SELECT 1 FROM bbx_work_order_device wod
+            WHERE wod.work_order_id = wo.id
+            AND wod.device_id IN
+            <foreach collection="deviceIds" item="did" open="(" separator="," close=")">
+                #{did}
+            </foreach>
+            <if test="tenantId != null">
+                AND wod.tenant_id = #{tenantId}
+            </if>
+            AND wod.deleted = 1
+            )
+        </if>
+        <!-- 如果两个集合都为空，则无工单符合条件 -->
+        <if test="(spaceIds == null or spaceIds.size() == 0) and (deviceIds == null or deviceIds.size() == 0)">
+            1 = 0
+        </if>
+        )
+        GROUP BY w.day_date
+        ORDER BY w.day_date
+    </select>
+</mapper>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 请注意：本mapper文件由工具生成，自定义sql请重新创建文件编写，由于数据模型存在变更的可能性，该文件可能会被重新覆盖 -->
+<mapper namespace="com.cgnpc.bbxpark.restaurant.mapper.RestaurantInboundRecordRepository">
+    <select id="getCoreSupplier" resultType="com.cgnpc.bbxpark.ioc.dto.model.RestaurantSupplierModel">
+        SELECT
+        supplier AS name,
+        COUNT(*) AS supplyNum,
+        COUNT(DISTINCT category) AS categoryNum
+        FROM bbx_restaurant_inbound_record
+        WHERE supplier IS NOT NULL and deleted = 1
+        <if test="tenantId != null">
+            and tenant_id =#{tenantId}
+        </if>
+        GROUP BY supplier
+        ORDER BY supplyNum DESC
+        LIMIT 1
+    </select>
+
+    <select id="getInventoryInboundTrend" resultType="com.cgnpc.bbxpark.ioc.dto.model.RestaurantInventoryInboundModel">
+        SELECT
+        TO_CHAR(inbound_time, 'MM') AS time,
+        category,
+        COALESCE(SUM(inbound_quantity), 0) AS inboundQty
+        FROM bbx_restaurant_inbound_record
+        WHERE
+        inbound_time >= #{minDay}
+        AND inbound_time &lt;= #{maxDay}
+        AND category IS NOT NULL
+        AND inbound_quantity IS NOT NULL
+        AND inbound_quantity >= 0
+        and deleted = 1
+        <if test="tenantId != null">
+            and tenant_id =#{tenantId}
+        </if>
+        GROUP BY TO_CHAR(inbound_time, 'MM'), category
+    </select>
+</mapper>

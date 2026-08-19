@@ -1,0 +1,17 @@
+spring:
+  profiles:
+    # 不同环境指向不同的配置文件   例如local 指向 application-local.yml
+    active: local
+
+#  servlet:
+#    multipart:
+#      max-file-size: 500MB
+#      max-request-size: 500MB
+#      file-size-threshold: 40960
+#      location: /usr/local/tomcat/temp
+
+#日志打印级别
+logging:
+  level:
+    root: info
+    io.lettuce.core: error
