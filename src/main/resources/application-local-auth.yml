@@ -1,0 +1,27 @@
+# 仅用于脱离公司认证、用户中心、权限中心和报表服务的本地联调。
+# 启动时同时启用 local 和 local-auth：--spring.profiles.active=local,local-auth
+cud:
+  login-mode: form
+  data-source:
+    user: other
+    permission: other
+  shiro:
+    filter-rules:
+      - /login-->anon
+      - /login/cas-->anon
+      - /sys/i18n/item/last-time-->anon
+      - /user/getCurrentUser-->anon
+      - /uau/perm/**-->anon
+      - /rpt/getToken-->anon
+
+bbx:
+  local-auth:
+    user-id: LOCAL001
+    user-name: 本地用户
+    password: local123
+    dept-id: LOCAL-DEPT
+    dept-name: 本地测试部门
+    dept-name-path: 本地组织\本地测试部门
+    frontend-url: http://127.0.0.1:8010
+    role-code: default_admin_auth
+    role-name: 本地管理员
